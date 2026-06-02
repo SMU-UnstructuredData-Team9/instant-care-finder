@@ -34,7 +34,11 @@ const HOSPITALS = [
     eta: "구급차 6분",
     score: 98,
     status: "available" as Status,
-    beds: { er: [12, 45], icu: [4, 12], or: [2, 8] },
+    beds: {
+      er: { value: 12, total: 45 },
+      icu: { value: 4, total: 12 },
+      or: { value: 2, total: 8 },
+    },
     capabilities: ["심근경색 수용가능", "24시간 응급수술", "뇌출혈 가능"],
   },
   {

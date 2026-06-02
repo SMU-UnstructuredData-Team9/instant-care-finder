@@ -33,15 +33,45 @@ export const Route = createFileRoute("/")({
 });
 
 // 증상 카테고리 (체크/검색 양쪽으로 추리기)
+// 한 증상 키워드가 여러 진료군에 동시에 매칭되도록 의도적으로 겹침.
+// 예: "가슴" → 심근경색 + 응급수술(대동맥/폐), "두통" → 뇌출혈 + 뇌졸중 + 중독
 const SYMPTOMS = [
-  { id: "심근경색", label: "가슴통증 · 심근경색", keywords: ["가슴", "심장", "흉통", "심근경색"] },
-  { id: "뇌졸중", label: "마비 · 뇌졸중", keywords: ["마비", "어지러움", "뇌졸중", "발음"] },
-  { id: "뇌출혈", label: "두통 · 뇌출혈", keywords: ["두통", "머리", "뇌출혈", "구토"] },
-  { id: "중증외상", label: "교통사고 · 중증외상", keywords: ["사고", "외상", "출혈", "골절"] },
-  { id: "응급수술", label: "복통 · 응급수술", keywords: ["복통", "수술", "맹장", "장폐색"] },
-  { id: "소아응급", label: "소아 · 영유아 응급", keywords: ["아이", "소아", "영아", "열"] },
-  { id: "화상", label: "화상", keywords: ["화상", "데임"] },
-  { id: "중독", label: "중독 · 약물", keywords: ["중독", "약물", "음독"] },
+  {
+    id: "심근경색",
+    label: "가슴통증 · 심근경색",
+    keywords: ["가슴", "심장", "흉통", "답답", "조이", "호흡곤란", "심근경색"],
+  },
+  {
+    id: "뇌졸중",
+    label: "마비 · 뇌졸중",
+    keywords: ["마비", "어지러", "어지러움", "발음", "한쪽", "쓰러", "두통", "뇌졸중"],
+  },
+  {
+    id: "뇌출혈",
+    label: "두통 · 뇌출혈",
+    keywords: ["두통", "머리", "구토", "의식", "쓰러", "뇌출혈"],
+  },
+  {
+    id: "중증외상",
+    label: "교통사고 · 중증외상",
+    keywords: ["사고", "외상", "출혈", "골절", "추락", "충돌", "가슴", "머리"],
+  },
+  {
+    id: "응급수술",
+    label: "복통 · 응급수술",
+    keywords: ["복통", "배", "수술", "맹장", "장폐색", "출혈", "가슴"],
+  },
+  {
+    id: "소아응급",
+    label: "소아 · 영유아 응급",
+    keywords: ["아이", "소아", "영아", "아기", "열", "경련"],
+  },
+  { id: "화상", label: "화상", keywords: ["화상", "데임", "끓"] },
+  {
+    id: "중독",
+    label: "중독 · 약물",
+    keywords: ["중독", "약물", "음독", "가스", "두통", "구토"],
+  },
 ] as const;
 
 type SymptomId = (typeof SYMPTOMS)[number]["id"];
@@ -192,8 +222,9 @@ function Index() {
 
   const filteredHospitals = useMemo(() => {
     if (activeSymptoms.size === 0) return HOSPITALS;
+    // 가능성이 여러 개일 수 있으므로 OR 매칭: 후보 중 하나라도 수용 가능하면 표시
     return HOSPITALS.filter((h) =>
-      [...activeSymptoms].every((s) => h.capabilities.includes(s)),
+      [...activeSymptoms].some((s) => h.capabilities.includes(s)),
     );
   }, [activeSymptoms]);
 

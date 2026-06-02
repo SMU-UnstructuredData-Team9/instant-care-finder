@@ -712,7 +712,10 @@ function Index() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetail(top);
+                  }}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95"
                 >
                   <Phone className="h-4 w-4" />

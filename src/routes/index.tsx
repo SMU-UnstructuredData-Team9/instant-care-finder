@@ -516,9 +516,91 @@ function Index() {
     });
   }, [allHospitals, radiusKm, activeSymptoms]);
 
-  const top = filteredHospitals[0];
-  const rest = filteredHospitals.slice(1);
+  const rank1 = filteredHospitals[0];
+  const rank2 = filteredHospitals[1];
+  const rank3 = filteredHospitals[2];
+  const rest = filteredHospitals.slice(3);
   const canExpand = allHospitals.length > filteredHospitals.length;
+
+  const rankConfig = [
+    { label: "추천 1순위", ring: "ring-2 ring-brand", badgeBg: "bg-brand" },
+    { label: "추천 2순위", ring: "ring-2 ring-status-green", badgeBg: "bg-status-green" },
+    { label: "추천 3순위", ring: "ring-2 ring-status-amber", badgeBg: "bg-status-amber" },
+  ] as const;
+
+  const renderRankCard = (h: Hospital | undefined, idx: number) => {
+    if (!h) return null;
+    const cfg = rankConfig[idx];
+    return (
+      <article
+        key={h.name}
+        onClick={() => setDetail(h)}
+        className={`animate-entrance relative cursor-pointer rounded-2xl bg-card p-4 shadow-xl ${cfg.ring} transition hover:shadow-2xl`}
+        style={{ animationDelay: `${100 + idx * 100}ms` }}
+      >
+        <div className={`absolute -top-3 left-4 rounded-full ${cfg.badgeBg} px-3 py-1 font-mono text-[10px] font-black italic tracking-tighter text-white`}>
+          {cfg.label}
+        </div>
+
+        <div className="mb-4 flex items-start justify-between">
+          <div className="space-y-1">
+            <h3 className="text-xl font-black tracking-tight">{h.name}</h3>
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>{h.address} · {h.distanceKm}km</span>
+              <span className="h-2 w-px bg-border" />
+              <span className="font-semibold text-brand">구급차 {h.etaMin}분</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-3xl font-black leading-none text-brand">{h.score}</div>
+            <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">적합도</div>
+          </div>
+        </div>
+
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <BedStat label="응급실" tone="green" value={h.er.value} total={h.er.total} state="여유" />
+          <BedStat label="중환자실" tone="neutral" value={h.icu.value} total={h.icu.total} state="보통" />
+          <BedStat label="수술실" tone="neutral" value={h.or.value} total={h.or.total} state="가능" />
+        </div>
+
+        <div className="mb-5 flex flex-wrap gap-1.5">
+          {h.capabilities.map((c) => (
+            <span
+              key={c}
+              className={
+                "rounded px-2 py-1 text-[10px] font-bold ring-1 " +
+                (activeSymptoms.has(c)
+                  ? "bg-brand text-brand-foreground ring-brand"
+                  : "bg-brand/5 text-brand ring-brand/10")
+              }
+            >
+              {c} 수용가능
+            </span>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDetail(h);
+            }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95"
+          >
+            <Phone className="h-4 w-4" />
+            전화 연결
+          </button>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95"
+          >
+            <Navigation className="h-4 w-4" />
+            길찾기
+          </button>
+        </div>
+      </article>
+    );
+  };
 
 
   return (

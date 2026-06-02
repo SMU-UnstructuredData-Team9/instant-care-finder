@@ -607,74 +607,84 @@ function Index() {
     <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-brand px-4 pb-4 pt-6 text-brand-foreground">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/50">
+        {/* 위치 영역 */}
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white/60">
+              <MapPin className="h-3 w-3" />
               현재 위치
             </p>
-            {editingLoc ? (
-              <div className="mt-1 flex items-center gap-2">
-                <input
-                  autoFocus
-                  value={manualLoc}
-                  onChange={(e) => setManualLoc(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && submitManualLoc()}
-                  placeholder="주소 또는 지역명 입력"
-                  className="min-w-0 flex-1 rounded-md bg-white/10 px-2 py-1 text-sm text-white placeholder:text-white/40 ring-1 ring-white/20 focus:outline-none focus:ring-white/60"
-                />
-                <button
-                  onClick={submitManualLoc}
-                  aria-label="저장"
-                  className="rounded-md bg-white p-1.5 text-brand"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <h1 className="mt-1 flex items-center gap-2 truncate text-base font-bold">
-                <MapPin className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{location}</span>
-                {!locating && (
-                  <span className="size-2 flex-shrink-0 animate-pulse-slow rounded-full bg-status-green" />
-                )}
-              </h1>
-            )}
+            <div className="flex gap-1.5">
+              <button
+                onClick={acquireLocation}
+                aria-label="내 위치 다시 찾기"
+                className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
+              >
+                <LocateFixed className={"h-4 w-4 " + (locating ? "animate-spin" : "")} />
+              </button>
+              <button
+                onClick={() => {
+                  setEditingLoc((v) => !v);
+                  setManualLoc("");
+                }}
+                aria-label="위치 직접 입력"
+                className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-          <div className="flex gap-1.5">
-            <button
-              onClick={acquireLocation}
-              aria-label="내 위치 다시 찾기"
-              className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
-            >
-              <LocateFixed className={"h-4 w-4 " + (locating ? "animate-spin" : "")} />
-            </button>
-            <button
-              onClick={() => {
-                setEditingLoc((v) => !v);
-                setManualLoc("");
-              }}
-              aria-label="위치 직접 입력"
-              className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          </div>
+
+          {editingLoc ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={manualLoc}
+                onChange={(e) => setManualLoc(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitManualLoc()}
+                placeholder="주소 또는 지역명 입력"
+                className="min-w-0 flex-1 rounded-xl bg-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/40 ring-1 ring-white/20 focus:outline-none focus:ring-white/60"
+              />
+              <button
+                onClick={submitManualLoc}
+                aria-label="저장"
+                className="rounded-xl bg-white p-2.5 text-brand"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <h1 className="flex items-center gap-2 text-base font-bold">
+              <span className="truncate">{location}</span>
+              {!locating && (
+                <span className="size-2 flex-shrink-0 animate-pulse-slow rounded-full bg-status-green" />
+              )}
+            </h1>
+          )}
         </div>
 
-        {/* 증상 검색 */}
-        <div className="mb-1.5 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/40">
-          <Search className="h-4 w-4 text-white/70" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="증상을 입력하세요 (예: 가슴이 답답하고 식은땀)"
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
-          />
-        </div>
-        <p className="mb-2 px-1 text-[10px] text-white/60">
-          입력한 증상에 해당할 수 있는 모든 진료군이 자동 체크됩니다.
-        </p>
+        {/* 구분선 */}
+        <div className="mb-4 h-px bg-white/10" />
 
+        {/* 증상 입력 영역 */}
+        <div>
+          <p className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white/60">
+            <Stethoscope className="h-3 w-3" />
+            증상 입력
+          </p>
+          <div className="mb-1.5 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/10 focus-within:ring-white/40">
+            <Search className="h-4 w-4 text-white/70" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="증상을 입력하세요 (예: 가슴이 답답하고 식은땀)"
+              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
+            />
+          </div>
+          <p className="mb-3 px-1 text-[10px] text-white/60">
+            입력한 증상에 해당할 수 있는 모든 진료군이 자동 체크됩니다.
+          </p>
+        </div>
 
         {/* 증상 체크 칩 */}
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

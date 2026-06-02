@@ -104,66 +104,124 @@ interface Hospital {
   message?: string;
 }
 
-const HOSPITALS: Hospital[] = [
+// 병원 템플릿 — 사용자 위치 주변에 상대적으로 배치됨.
+// dx/dy: 사용자 위치에서의 동/북 방향 오프셋(km). 실제 거리/도착시간은 좌표로 계산.
+const HOSPITAL_TEMPLATES = [
   {
-    name: "서울성심중앙병원",
-    address: "강남구 삼성로",
-    lat: 37.5108,
-    lng: 127.0594,
-    distanceKm: 1.2,
-    etaMin: 6,
+    suffix: "성심중앙병원",
+    dxKm: 0.4,
+    dyKm: 0.9,
     score: 98,
-    status: "available",
+    status: "available" as Status,
     er: { value: 12, total: 45 },
     icu: { value: 4, total: 12 },
     or: { value: 2, total: 8 },
-    capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"],
+    capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"] as SymptomId[],
   },
   {
-    name: "연세의료원 강남",
-    address: "강남구 도곡로",
-    lat: 37.4894,
-    lng: 127.0470,
-    distanceKm: 2.8,
-    etaMin: 12,
+    suffix: "의료원",
+    dxKm: -1.8,
+    dyKm: -1.4,
     score: 84,
-    status: "caution",
+    status: "caution" as Status,
     er: { value: 3, total: 32 },
     icu: { value: 1, total: 10 },
     or: { value: 1, total: 6 },
-    capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"],
+    capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"] as SymptomId[],
   },
   {
-    name: "강남삼성병원",
-    address: "강남구 일원로",
-    lat: 37.4881,
-    lng: 127.0856,
-    distanceKm: 4.5,
-    etaMin: 22,
+    suffix: "삼성병원",
+    dxKm: 2.6,
+    dyKm: -2.2,
     score: 41,
-    status: "saturated",
+    status: "saturated" as Status,
     er: { value: 0, total: 40 },
     icu: { value: 0, total: 14 },
     or: { value: 0, total: 8 },
-    capabilities: ["뇌출혈", "중증외상", "응급수술"],
+    capabilities: ["뇌출혈", "중증외상", "응급수술"] as SymptomId[],
     message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
   },
   {
-    name: "한양대학교병원",
-    address: "성동구 왕십리로",
-    lat: 37.5586,
-    lng: 127.0440,
-
-    distanceKm: 6.1,
-    etaMin: 18,
+    suffix: "대학교병원",
+    dxKm: -3.4,
+    dyKm: 4.6,
     score: 76,
-    status: "available",
+    status: "available" as Status,
     er: { value: 8, total: 36 },
     icu: { value: 2, total: 12 },
     or: { value: 3, total: 8 },
-    capabilities: ["일반응급", "화상", "중독", "응급수술"],
+    capabilities: ["일반응급", "화상", "중독", "응급수술"] as SymptomId[],
+  },
+  {
+    suffix: "중앙의료원",
+    dxKm: 6.2,
+    dyKm: 5.8,
+    score: 68,
+    status: "available" as Status,
+    er: { value: 6, total: 30 },
+    icu: { value: 1, total: 8 },
+    or: { value: 1, total: 6 },
+    capabilities: ["일반응급", "소아응급", "뇌졸중"] as SymptomId[],
+  },
+  {
+    suffix: "성모병원",
+    dxKm: -7.5,
+    dyKm: 2.1,
+    score: 72,
+    status: "caution" as Status,
+    er: { value: 2, total: 28 },
+    icu: { value: 1, total: 9 },
+    or: { value: 0, total: 5 },
+    capabilities: ["일반응급", "심근경색", "응급수술"] as SymptomId[],
   },
 ];
+
+// 위경도 1도 ≈ 111km. 동쪽 거리는 위도에 따라 cos(lat) 보정.
+function offsetCoords(lat: number, lng: number, dxKm: number, dyKm: number) {
+  const dLat = dyKm / 111;
+  const dLng = dxKm / (111 * Math.cos((lat * Math.PI) / 180));
+  return { lat: lat + dLat, lng: lng + dLng };
+}
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function generateHospitals(
+  coords: { lat: number; lng: number } | null,
+  cityName: string,
+): Hospital[] {
+  if (!coords) return [];
+  return HOSPITAL_TEMPLATES.map((t) => {
+    const pos = offsetCoords(coords.lat, coords.lng, t.dxKm, t.dyKm);
+    const distance = haversineKm(coords, pos);
+    // 구급차 평균 40km/h 가정 + 출동 2분
+    const eta = Math.max(3, Math.round((distance / 40) * 60 + 2));
+    return {
+      name: `${cityName}${t.suffix}`,
+      address: `${cityName} 응급의료센터`,
+      lat: pos.lat,
+      lng: pos.lng,
+      distanceKm: Math.round(distance * 10) / 10,
+      etaMin: eta,
+      score: t.score,
+      status: t.status,
+      er: t.er,
+      icu: t.icu,
+      or: t.or,
+      capabilities: t.capabilities,
+      message: t.message,
+    };
+  });
+}
+
 
 function Index() {
   const [selected, setSelected] = useState<Set<SymptomId>>(new Set());

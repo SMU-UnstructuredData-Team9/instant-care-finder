@@ -346,16 +346,32 @@ function Index() {
     return s;
   }, [selected, matchedFromQuery]);
 
+  // 사용자 위치 주변에 병원 생성 + 반경 필터 + 증상 필터
+  const allHospitals = useMemo(
+    () => generateHospitals(coords, cityName),
+    [coords, cityName],
+  );
+
   const filteredHospitals = useMemo(() => {
-    if (activeSymptoms.size === 0) return HOSPITALS;
-    // 가능성이 여러 개일 수 있으므로 OR 매칭: 후보 중 하나라도 수용 가능하면 표시
-    return HOSPITALS.filter((h) =>
-      [...activeSymptoms].some((s) => h.capabilities.includes(s)),
-    );
-  }, [activeSymptoms]);
+    let list = allHospitals.filter((h) => h.distanceKm <= radiusKm);
+    if (activeSymptoms.size > 0) {
+      list = list.filter((h) =>
+        [...activeSymptoms].some((s) => h.capabilities.includes(s)),
+      );
+    }
+    // 가까운 + 가용한 순으로 정렬
+    return list.sort((a, b) => {
+      const statusRank = { available: 0, caution: 1, saturated: 2 } as const;
+      const sd = statusRank[a.status] - statusRank[b.status];
+      if (sd !== 0) return sd;
+      return a.distanceKm - b.distanceKm;
+    });
+  }, [allHospitals, radiusKm, activeSymptoms]);
 
   const top = filteredHospitals[0];
   const rest = filteredHospitals.slice(1);
+  const canExpand = radiusKm < 30 && allHospitals.length > filteredHospitals.length;
+
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background text-foreground">

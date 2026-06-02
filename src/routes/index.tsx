@@ -735,6 +735,124 @@ function Index() {
           </span>
         </div>
       </footer>
+
+      <HospitalDetailModal hospital={detail} onClose={() => setDetail(null)} activeSymptoms={activeSymptoms} />
+    </div>
+  );
+}
+
+function HospitalDetailModal({
+  hospital,
+  onClose,
+  activeSymptoms,
+}: {
+  hospital: Hospital | null;
+  onClose: () => void;
+  activeSymptoms: Set<SymptomId>;
+}) {
+  if (!hospital) return null;
+  const h = hospital;
+  const statusLabel =
+    h.status === "available" ? "수용 가능" : h.status === "caution" ? "주의 (잔여 부족)" : "포화 / 수용 불가";
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="animate-entrance max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-t-3xl bg-card p-5 shadow-2xl sm:rounded-3xl"
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2">
+              <StatusBadge status={h.status} />
+              <span className="font-mono text-[10px] font-bold text-muted-foreground">
+                적합도 {h.score}
+              </span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tight">{h.name}</h2>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {h.address}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            className="flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-muted active:scale-95"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl bg-muted/40 p-3">
+          <DetailMetric label="거리" value={`${h.distanceKm}km`} />
+          <DetailMetric label="구급차" value={`${h.etaMin}분`} />
+          <DetailMetric label="상태" value={statusLabel} small />
+        </div>
+
+        {h.message && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-status-amber/20 bg-status-amber/10 p-3 text-xs font-medium text-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-status-amber" />
+            <span>{h.message}</span>
+          </div>
+        )}
+
+        <div className="mb-4">
+          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            실시간 병상 현황
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            <BedStat label="응급실" tone={h.er.value > 0 ? "green" : "red"} value={h.er.value} total={h.er.total} state={h.er.value > 0 ? "가용" : "포화"} />
+            <BedStat label="중환자실" tone={h.icu.value > 0 ? "green" : "red"} value={h.icu.value} total={h.icu.total} state={h.icu.value > 0 ? "가용" : "포화"} />
+            <BedStat label="수술실" tone={h.or.value > 0 ? "green" : "red"} value={h.or.value} total={h.or.total} state={h.or.value > 0 ? "가능" : "포화"} />
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            수용 가능 진료군
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {h.capabilities.map((c) => (
+              <span
+                key={c}
+                className={
+                  "rounded-md px-2 py-1 text-[11px] font-bold ring-1 " +
+                  (activeSymptoms.has(c)
+                    ? "bg-brand text-brand-foreground ring-brand"
+                    : "bg-brand/5 text-brand ring-brand/10")
+                }
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground active:scale-95">
+            <Phone className="h-4 w-4" />
+            전화 연결
+          </button>
+          <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border active:scale-95">
+            <Navigation className="h-4 w-4" />
+            길찾기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailMetric({ label, value, small }: { label: string; value: string; small?: boolean }) {
+  return (
+    <div className="text-center">
+      <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      <p className={"mt-1 font-black tracking-tight " + (small ? "text-xs" : "text-lg")}>{value}</p>
     </div>
   );
 }

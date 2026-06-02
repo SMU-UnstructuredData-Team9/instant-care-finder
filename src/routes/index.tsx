@@ -298,15 +298,19 @@ function Index() {
         </div>
 
         {/* 증상 검색 */}
-        <div className="mb-2 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/40">
+        <div className="mb-1.5 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/40">
           <Search className="h-4 w-4 text-white/70" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="증상 검색 (예: 가슴통증, 두통, 사고)"
+            placeholder="증상을 입력하세요 (예: 가슴이 답답하고 식은땀)"
             className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
           />
         </div>
+        <p className="mb-2 px-1 text-[10px] text-white/60">
+          입력한 증상에 해당할 수 있는 모든 진료군이 자동 체크됩니다.
+        </p>
+
 
         {/* 증상 체크 칩 */}
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

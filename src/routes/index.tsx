@@ -11,6 +11,10 @@ import {
   Pencil,
   Check,
   X,
+  Clock,
+  Building2,
+  Stethoscope,
+  Info,
 } from "lucide-react";
 import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";

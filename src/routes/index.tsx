@@ -33,49 +33,52 @@ export const Route = createFileRoute("/")({
 });
 
 // 증상 카테고리 (체크/검색 양쪽으로 추리기)
-// 한 증상 키워드가 여러 진료군에 동시에 매칭되도록 의도적으로 겹침.
-// 예: "가슴" → 심근경색 + 응급수술(대동맥/폐), "두통" → 뇌출혈 + 뇌졸중 + 중독
+// 한 증상이 여러 진료군과 동시에 매칭되도록 키워드를 의도적으로 넓게 겹침.
+// 응급 상황에서는 정확한 병명 판단보다 "가능성 있는 모든 진료군"을 띄워주는 것이 안전함.
+// 예: "복통" → 일반응급 + 응급수술 (장염일 수도, 맹장일 수도)
+//     "두통" → 일반응급 + 뇌출혈 + 뇌졸중 + 중독
 const SYMPTOMS = [
   {
     id: "심근경색",
     label: "가슴통증 · 심근경색",
-    keywords: ["가슴", "심장", "흉통", "답답", "조이", "호흡곤란", "심근경색"],
+    keywords: ["가슴", "심장", "흉통", "답답", "조이", "호흡곤란", "숨", "심근경색"],
   },
   {
     id: "뇌졸중",
     label: "마비 · 뇌졸중",
-    keywords: ["마비", "어지러", "어지러움", "발음", "한쪽", "쓰러", "두통", "뇌졸중"],
+    keywords: ["마비", "어지러", "발음", "한쪽", "쓰러", "두통", "머리", "어눌", "뇌졸중"],
   },
   {
     id: "뇌출혈",
     label: "두통 · 뇌출혈",
-    keywords: ["두통", "머리", "구토", "의식", "쓰러", "뇌출혈"],
+    keywords: ["두통", "머리", "구토", "의식", "쓰러", "터질", "뇌출혈"],
   },
   {
     id: "중증외상",
     label: "교통사고 · 중증외상",
-    keywords: ["사고", "외상", "출혈", "골절", "추락", "충돌", "가슴", "머리"],
+    keywords: ["사고", "외상", "출혈", "골절", "추락", "충돌", "찢어", "부딪", "다침"],
   },
   {
     id: "일반응급",
     label: "복통 · 발열 · 일반 응급",
-    keywords: ["복통", "배", "설사", "구토", "발열", "열", "장염", "메스꺼움", "어지러"],
+    keywords: ["복통", "배", "설사", "구토", "발열", "열", "장염", "메스꺼움", "어지러", "두통"],
   },
   {
     id: "응급수술",
-    label: "응급수술 (맹장 · 장폐색 등)",
-    keywords: ["수술", "맹장", "충수염", "장폐색", "심한 복통", "찢어", "내장"],
+    label: "응급수술 가능성 (맹장 · 장폐색 등)",
+    // 복통도 포함 — 일반인이 맹장인지 장염인지 구분 불가하므로 가능성으로 띄움
+    keywords: ["복통", "배", "수술", "맹장", "충수염", "장폐색", "내장", "심한", "출혈"],
   },
   {
     id: "소아응급",
     label: "소아 · 영유아 응급",
-    keywords: ["아이", "소아", "영아", "아기", "경련"],
+    keywords: ["아이", "소아", "영아", "아기", "신생아", "경련"],
   },
-  { id: "화상", label: "화상", keywords: ["화상", "데임", "끓"] },
+  { id: "화상", label: "화상", keywords: ["화상", "데임", "끓", "뜨거"] },
   {
     id: "중독",
     label: "중독 · 약물",
-    keywords: ["중독", "약물", "음독", "가스"],
+    keywords: ["중독", "약물", "음독", "가스", "두통", "구토", "어지러"],
   },
 ] as const;
 
@@ -295,15 +298,19 @@ function Index() {
         </div>
 
         {/* 증상 검색 */}
-        <div className="mb-2 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/40">
+        <div className="mb-1.5 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/40">
           <Search className="h-4 w-4 text-white/70" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="증상 검색 (예: 가슴통증, 두통, 사고)"
+            placeholder="증상을 입력하세요 (예: 가슴이 답답하고 식은땀)"
             className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
           />
         </div>
+        <p className="mb-2 px-1 text-[10px] text-white/60">
+          입력한 증상에 해당할 수 있는 모든 진료군이 자동 체크됩니다.
+        </p>
+
 
         {/* 증상 체크 칩 */}
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

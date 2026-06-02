@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MapPin,
   Phone,
@@ -11,7 +11,9 @@ import {
   Pencil,
   Check,
 } from "lucide-react";
-import dispatchMap from "@/assets/dispatch-map.jpg";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -88,6 +90,8 @@ type Status = "available" | "caution" | "saturated";
 interface Hospital {
   name: string;
   address: string;
+  lat: number;
+  lng: number;
   distanceKm: number;
   etaMin: number;
   score: number;
@@ -103,6 +107,8 @@ const HOSPITALS: Hospital[] = [
   {
     name: "서울성심중앙병원",
     address: "강남구 삼성로",
+    lat: 37.5108,
+    lng: 127.0594,
     distanceKm: 1.2,
     etaMin: 6,
     score: 98,
@@ -115,6 +121,8 @@ const HOSPITALS: Hospital[] = [
   {
     name: "연세의료원 강남",
     address: "강남구 도곡로",
+    lat: 37.4894,
+    lng: 127.0470,
     distanceKm: 2.8,
     etaMin: 12,
     score: 84,
@@ -127,6 +135,8 @@ const HOSPITALS: Hospital[] = [
   {
     name: "강남삼성병원",
     address: "강남구 일원로",
+    lat: 37.4881,
+    lng: 127.0856,
     distanceKm: 4.5,
     etaMin: 22,
     score: 41,
@@ -140,6 +150,9 @@ const HOSPITALS: Hospital[] = [
   {
     name: "한양대학교병원",
     address: "성동구 왕십리로",
+    lat: 37.5586,
+    lng: 127.0440,
+
     distanceKm: 6.1,
     etaMin: 18,
     score: 76,
@@ -155,54 +168,82 @@ function Index() {
   const [selected, setSelected] = useState<Set<SymptomId>>(new Set());
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("위치 확인 중…");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(true);
   const [editingLoc, setEditingLoc] = useState(false);
   const [manualLoc, setManualLoc] = useState("");
 
-  // 앱 시작 시 위치 자동 탐색
-  useEffect(() => {
+  // 좌표 → 도로명 주소 (OpenStreetMap Nominatim, 무료/무인증)
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ko&zoom=18`,
+      );
+      const data = await res.json();
+      const a = data.address ?? {};
+      const parts = [
+        a.city || a.county || a.province,
+        a.borough || a.city_district || a.suburb,
+        a.road,
+        a.house_number,
+      ].filter(Boolean);
+      return parts.length ? parts.join(" ") : (data.display_name as string);
+    } catch {
+      return null;
+    }
+  };
+
+  const acquireLocation = async () => {
+    setLocating(true);
+    setLocation("위치 확인 중…");
     if (!("geolocation" in navigator)) {
       setLocation("위치 권한 없음 — 직접 입력 필요");
       setLocating(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation(
-          `현재 위치 (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
-        );
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ lat, lng });
+        const addr = await reverseGeocode(lat, lng);
+        setLocation(addr ?? `현재 위치 (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
         setLocating(false);
       },
       () => {
+        // 권한 거부 시 강남 기본값으로 폴백
+        setCoords({ lat: 37.5006, lng: 127.0364 });
         setLocation("서울 강남구 테헤란로 427");
         setLocating(false);
       },
-      { timeout: 5000 },
+      { timeout: 8000 },
     );
+  };
+
+  useEffect(() => {
+    acquireLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refreshLocation = () => {
-    setLocating(true);
-    setLocation("위치 확인 중…");
-    navigator.geolocation?.getCurrentPosition(
-      (pos) => {
-        setLocation(
-          `현재 위치 (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
-        );
-        setLocating(false);
-      },
-      () => {
-        setLocation("위치를 가져올 수 없음");
-        setLocating(false);
-      },
-    );
+  const submitManualLoc = async () => {
+    const q = manualLoc.trim();
+    if (q.length === 0) return;
+    setLocation(q);
+    setEditingLoc(false);
+    // 입력한 주소를 좌표로 변환 (forward geocoding)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ko&limit=1`,
+      );
+      const data = await res.json();
+      if (data[0]) {
+        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+      }
+    } catch {
+      /* 무시 */
+    }
   };
 
-  const submitManualLoc = () => {
-    if (manualLoc.trim().length === 0) return;
-    setLocation(manualLoc.trim());
-    setEditingLoc(false);
-  };
 
   const toggleSymptom = (id: SymptomId) => {
     setSelected((prev) => {
@@ -278,7 +319,7 @@ function Index() {
           </div>
           <div className="flex gap-1.5">
             <button
-              onClick={refreshLocation}
+              onClick={acquireLocation}
               aria-label="내 위치 다시 찾기"
               className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
             >
@@ -339,22 +380,17 @@ function Index() {
       </header>
 
       <main className="flex-1 space-y-5 px-4 py-6">
-        {/* Mini map */}
+        {/* 실시간 지도 */}
         <section className="animate-entrance overflow-hidden rounded-2xl ring-1 ring-black/5">
-          <div className="relative h-32 w-full">
-            <img
-              src={dispatchMap}
-              alt="응급의료 디스패치 지도"
-              width={1024}
-              height={512}
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
+          <div className="relative h-56 w-full">
+            <LiveMap coords={coords} hospitals={filteredHospitals} />
+            <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
               <span className="size-1.5 animate-pulse-slow rounded-full bg-status-green" />
               실시간 갱신 중
             </div>
           </div>
         </section>
+
 
         {/* Recommendations */}
         <section className="space-y-4">
@@ -564,6 +600,89 @@ function StatusBadge({ status }: { status: Status }) {
       포화
     </span>
   );
+}
+
+function LiveMap({
+  coords,
+  hospitals,
+}: {
+  coords: { lat: number; lng: number } | null;
+  hospitals: Hospital[];
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
+
+  // 지도 초기화 (1회)
+  useEffect(() => {
+    if (!ref.current || mapRef.current) return;
+    const map = L.map(ref.current, {
+      center: [37.5, 127.04],
+      zoom: 12,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      { maxZoom: 19 },
+    ).addTo(map);
+    layerRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // 마커 갱신
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer) return;
+    layer.clearLayers();
+
+    const points: L.LatLngExpression[] = [];
+
+    if (coords) {
+      const meIcon = L.divIcon({
+        className: "",
+        html: `<div style="position:relative"><div style="width:18px;height:18px;border-radius:9999px;background:oklch(0.65 0.22 250);border:3px solid white;box-shadow:0 0 0 4px oklch(0.65 0.22 250 / 0.3)"></div></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+      L.marker([coords.lat, coords.lng], { icon: meIcon })
+        .bindPopup("<b>내 위치</b>")
+        .addTo(layer);
+      points.push([coords.lat, coords.lng]);
+    }
+
+    hospitals.forEach((h, i) => {
+      const color =
+        h.status === "available"
+          ? "oklch(0.72 0.17 162)"
+          : h.status === "caution"
+            ? "oklch(0.78 0.17 71)"
+            : "oklch(0.65 0.24 27)";
+      const isTop = i === 0;
+      const size = isTop ? 32 : 26;
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px;background:${color};color:white;font-weight:900;font-size:${isTop ? 13 : 11}px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${i + 1}</div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+      L.marker([h.lat, h.lng], { icon })
+        .bindPopup(`<b>${h.name}</b><br/>${h.address}`)
+        .addTo(layer);
+      points.push([h.lat, h.lng]);
+    });
+
+    if (points.length > 0) {
+      map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
+    }
+  }, [coords, hospitals]);
+
+  return <div ref={ref} className="h-full w-full" />;
 }
 
 function BedStat({

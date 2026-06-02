@@ -142,17 +142,17 @@ function Index() {
             <div className="mb-4 flex items-start justify-between">
               <div className="space-y-1">
                 <h3 className="text-xl font-black tracking-tight">
-                  {HOSPITALS[0].name}
+                  {TOP_HOSPITAL.name}
                 </h3>
                 <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <span>{HOSPITALS[0].address}</span>
+                  <span>{TOP_HOSPITAL.address}</span>
                   <span className="h-2 w-px bg-border" />
-                  <span className="font-semibold text-brand">{HOSPITALS[0].eta}</span>
+                  <span className="font-semibold text-brand">{TOP_HOSPITAL.eta}</span>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-black leading-none text-brand">
-                  {HOSPITALS[0].score}
+                  {TOP_HOSPITAL.score}
                 </div>
                 <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
                   Match Score
@@ -164,28 +164,28 @@ function Index() {
               <BedStat
                 label="ER Beds"
                 tone="green"
-                value={HOSPITALS[0].beds.er[0]}
-                total={HOSPITALS[0].beds.er[1]}
+                value={TOP_HOSPITAL.beds.er.value}
+                total={TOP_HOSPITAL.beds.er.total}
                 state="여유"
               />
               <BedStat
                 label="ICU"
                 tone="neutral"
-                value={HOSPITALS[0].beds.icu[0]}
-                total={HOSPITALS[0].beds.icu[1]}
+                value={TOP_HOSPITAL.beds.icu.value}
+                total={TOP_HOSPITAL.beds.icu.total}
                 state="보통"
               />
               <BedStat
                 label="OR"
                 tone="neutral"
-                value={HOSPITALS[0].beds.or[0]}
-                total={HOSPITALS[0].beds.or[1]}
+                value={TOP_HOSPITAL.beds.or.value}
+                total={TOP_HOSPITAL.beds.or.total}
                 state="가능"
               />
             </div>
 
             <div className="mb-5 flex flex-wrap gap-1.5">
-              {HOSPITALS[0].capabilities.map((c) => (
+              {TOP_HOSPITAL.capabilities.map((c) => (
                 <span
                   key={c}
                   className="rounded bg-brand/5 px-2 py-1 text-[10px] font-bold text-brand ring-1 ring-brand/10"
@@ -215,10 +215,10 @@ function Index() {
             <div className="mb-3 flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-bold tracking-tight">
-                  {HOSPITALS[1].name}
+                  {SECOND_HOSPITAL.name}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {HOSPITALS[1].address}
+                  {SECOND_HOSPITAL.address}
                 </p>
               </div>
               <span className="rounded bg-status-amber/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-amber">
@@ -232,9 +232,9 @@ function Index() {
                     ER Status
                   </p>
                   <p className="text-xl font-black text-status-amber">
-                    {String(HOSPITALS[1].er).padStart(2, "0")}
+                    {String(SECOND_HOSPITAL.er).padStart(2, "0")}
                     <span className="text-xs font-normal opacity-50">
-                      /{HOSPITALS[1].erTotal}
+                      /{SECOND_HOSPITAL.erTotal}
                     </span>
                   </p>
                 </div>
@@ -242,7 +242,7 @@ function Index() {
                   <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
                     Score
                   </p>
-                  <p className="text-xl font-black">{HOSPITALS[1].score}</p>
+                  <p className="text-xl font-black">{SECOND_HOSPITAL.score}</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -270,10 +270,10 @@ function Index() {
             <div className="mb-3 flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-bold tracking-tight text-muted-foreground">
-                  {HOSPITALS[2].name}
+                  {THIRD_HOSPITAL.name}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {HOSPITALS[2].address}
+                  {THIRD_HOSPITAL.address}
                 </p>
               </div>
               <span className="rounded bg-status-red/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-red">
@@ -282,7 +282,7 @@ function Index() {
             </div>
             <div className="flex items-start gap-2 rounded-lg border border-status-red/15 bg-status-red/5 p-2 text-xs font-medium text-status-red">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-              <span>{HOSPITALS[2].message}</span>
+              <span>{THIRD_HOSPITAL.message}</span>
             </div>
           </article>
 

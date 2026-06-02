@@ -417,7 +417,7 @@ function Index() {
 
   const top = filteredHospitals[0];
   const rest = filteredHospitals.slice(1);
-  const canExpand = radiusKm < 30 && allHospitals.length > filteredHospitals.length;
+  const canExpand = allHospitals.length > filteredHospitals.length;
 
 
   return (

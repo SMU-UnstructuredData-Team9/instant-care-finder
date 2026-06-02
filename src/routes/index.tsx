@@ -1,6 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { MapPin, Phone, Navigation, Activity, AlertTriangle, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  MapPin,
+  Phone,
+  Navigation,
+  AlertTriangle,
+  ChevronRight,
+  Search,
+  LocateFixed,
+  Pencil,
+  Check,
+} from "lucide-react";
 import dispatchMap from "@/assets/dispatch-map.jpg";
 
 export const Route = createFileRoute("/")({
@@ -22,79 +32,263 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const FILTERS = ["전체", "심근경색", "뇌졸중", "뇌출혈", "중증외상", "응급수술"] as const;
+// 증상 카테고리 (체크/검색 양쪽으로 추리기)
+const SYMPTOMS = [
+  { id: "심근경색", label: "가슴통증 · 심근경색", keywords: ["가슴", "심장", "흉통", "심근경색"] },
+  { id: "뇌졸중", label: "마비 · 뇌졸중", keywords: ["마비", "어지러움", "뇌졸중", "발음"] },
+  { id: "뇌출혈", label: "두통 · 뇌출혈", keywords: ["두통", "머리", "뇌출혈", "구토"] },
+  { id: "중증외상", label: "교통사고 · 중증외상", keywords: ["사고", "외상", "출혈", "골절"] },
+  { id: "응급수술", label: "복통 · 응급수술", keywords: ["복통", "수술", "맹장", "장폐색"] },
+  { id: "소아응급", label: "소아 · 영유아 응급", keywords: ["아이", "소아", "영아", "열"] },
+  { id: "화상", label: "화상", keywords: ["화상", "데임"] },
+  { id: "중독", label: "중독 · 약물", keywords: ["중독", "약물", "음독"] },
+] as const;
 
+type SymptomId = (typeof SYMPTOMS)[number]["id"];
 type Status = "available" | "caution" | "saturated";
 
-const TOP_HOSPITAL = {
-  name: "서울성심중앙병원",
-  address: "강남구 삼성로 · 1.2km",
-  eta: "구급차 6분",
-  score: 98,
-  beds: {
+interface Hospital {
+  name: string;
+  address: string;
+  distanceKm: number;
+  etaMin: number;
+  score: number;
+  status: Status;
+  er: { value: number; total: number };
+  icu: { value: number; total: number };
+  or: { value: number; total: number };
+  capabilities: SymptomId[];
+  message?: string;
+}
+
+const HOSPITALS: Hospital[] = [
+  {
+    name: "서울성심중앙병원",
+    address: "강남구 삼성로",
+    distanceKm: 1.2,
+    etaMin: 6,
+    score: 98,
+    status: "available",
     er: { value: 12, total: 45 },
     icu: { value: 4, total: 12 },
     or: { value: 2, total: 8 },
+    capabilities: ["심근경색", "응급수술", "뇌출혈", "중증외상"],
   },
-  capabilities: ["심근경색 수용가능", "24시간 응급수술", "뇌출혈 가능"],
-};
-
-const SECOND_HOSPITAL = {
-  name: "연세의료원 강남",
-  address: "강남구 도곡로 · 2.8km · 12분",
-  score: 84,
-  er: 3,
-  erTotal: 32,
-};
-
-const THIRD_HOSPITAL = {
-  name: "강남삼성병원",
-  address: "강남구 일원로 · 4.5km · 22분",
-  message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
-};
+  {
+    name: "연세의료원 강남",
+    address: "강남구 도곡로",
+    distanceKm: 2.8,
+    etaMin: 12,
+    score: 84,
+    status: "caution",
+    er: { value: 3, total: 32 },
+    icu: { value: 1, total: 10 },
+    or: { value: 1, total: 6 },
+    capabilities: ["뇌졸중", "심근경색", "소아응급"],
+  },
+  {
+    name: "강남삼성병원",
+    address: "강남구 일원로",
+    distanceKm: 4.5,
+    etaMin: 22,
+    score: 41,
+    status: "saturated",
+    er: { value: 0, total: 40 },
+    icu: { value: 0, total: 14 },
+    or: { value: 0, total: 8 },
+    capabilities: ["뇌출혈", "중증외상", "응급수술"],
+    message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
+  },
+  {
+    name: "한양대학교병원",
+    address: "성동구 왕십리로",
+    distanceKm: 6.1,
+    etaMin: 18,
+    score: 76,
+    status: "available",
+    er: { value: 8, total: 36 },
+    icu: { value: 2, total: 12 },
+    or: { value: 3, total: 8 },
+    capabilities: ["화상", "중독", "응급수술"],
+  },
+];
 
 function Index() {
-  const [activeFilter, setActiveFilter] = useState<string>("전체");
+  const [selected, setSelected] = useState<Set<SymptomId>>(new Set());
+  const [query, setQuery] = useState("");
+  const [location, setLocation] = useState("위치 확인 중…");
+  const [locating, setLocating] = useState(true);
+  const [editingLoc, setEditingLoc] = useState(false);
+  const [manualLoc, setManualLoc] = useState("");
+
+  // 앱 시작 시 위치 자동 탐색
+  useEffect(() => {
+    if (!("geolocation" in navigator)) {
+      setLocation("위치 권한 없음 — 직접 입력 필요");
+      setLocating(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation(
+          `현재 위치 (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
+        );
+        setLocating(false);
+      },
+      () => {
+        setLocation("서울 강남구 테헤란로 427");
+        setLocating(false);
+      },
+      { timeout: 5000 },
+    );
+  }, []);
+
+  const refreshLocation = () => {
+    setLocating(true);
+    setLocation("위치 확인 중…");
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        setLocation(
+          `현재 위치 (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
+        );
+        setLocating(false);
+      },
+      () => {
+        setLocation("위치를 가져올 수 없음");
+        setLocating(false);
+      },
+    );
+  };
+
+  const submitManualLoc = () => {
+    if (manualLoc.trim().length === 0) return;
+    setLocation(manualLoc.trim());
+    setEditingLoc(false);
+  };
+
+  const toggleSymptom = (id: SymptomId) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // 검색어 기반 자동 매칭
+  const matchedFromQuery = useMemo<SymptomId[]>(() => {
+    const q = query.trim();
+    if (!q) return [];
+    return SYMPTOMS.filter((s) =>
+      s.keywords.some((k) => q.includes(k)) || s.label.includes(q) || s.id.includes(q),
+    ).map((s) => s.id);
+  }, [query]);
+
+  const activeSymptoms = useMemo<Set<SymptomId>>(() => {
+    const s = new Set<SymptomId>(selected);
+    matchedFromQuery.forEach((id) => s.add(id));
+    return s;
+  }, [selected, matchedFromQuery]);
+
+  const filteredHospitals = useMemo(() => {
+    if (activeSymptoms.size === 0) return HOSPITALS;
+    return HOSPITALS.filter((h) =>
+      [...activeSymptoms].every((s) => h.capabilities.includes(s)),
+    );
+  }, [activeSymptoms]);
+
+  const top = filteredHospitals[0];
+  const rest = filteredHospitals.slice(1);
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background text-foreground">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-brand px-4 pb-4 pt-6 text-brand-foreground">
-        <div className="mb-4 flex items-start justify-between">
-          <div>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/50">
-              Current Location
+              현재 위치
             </p>
-            <h1 className="mt-1 flex items-center gap-2 text-lg font-bold">
-              <MapPin className="h-4 w-4" />
-              서울 강남구 테헤란로 427
-              <span className="size-2 animate-pulse-slow rounded-full bg-status-green" />
-            </h1>
+            {editingLoc ? (
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={manualLoc}
+                  onChange={(e) => setManualLoc(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && submitManualLoc()}
+                  placeholder="주소 또는 지역명 입력"
+                  className="min-w-0 flex-1 rounded-md bg-white/10 px-2 py-1 text-sm text-white placeholder:text-white/40 ring-1 ring-white/20 focus:outline-none focus:ring-white/60"
+                />
+                <button
+                  onClick={submitManualLoc}
+                  aria-label="저장"
+                  className="rounded-md bg-white p-1.5 text-brand"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <h1 className="mt-1 flex items-center gap-2 truncate text-base font-bold">
+                <MapPin className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">{location}</span>
+                {!locating && (
+                  <span className="size-2 flex-shrink-0 animate-pulse-slow rounded-full bg-status-green" />
+                )}
+              </h1>
+            )}
           </div>
-          <button
-            aria-label="반경 설정"
-            className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
-          >
-            <Activity className="h-5 w-5 text-white/90" />
-          </button>
+          <div className="flex gap-1.5">
+            <button
+              onClick={refreshLocation}
+              aria-label="내 위치 다시 찾기"
+              className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
+            >
+              <LocateFixed className={"h-4 w-4 " + (locating ? "animate-spin" : "")} />
+            </button>
+            <button
+              onClick={() => {
+                setEditingLoc((v) => !v);
+                setManualLoc("");
+              }}
+              aria-label="위치 직접 입력"
+              className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Filter chips */}
+        {/* 증상 검색 */}
+        <div className="mb-2 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/10 focus-within:ring-white/40">
+          <Search className="h-4 w-4 text-white/70" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="증상 검색 (예: 가슴통증, 두통, 사고)"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-white/50 focus:outline-none"
+          />
+        </div>
+
+        {/* 증상 체크 칩 */}
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          {FILTERS.map((f) => {
-            const active = activeFilter === f;
+          {SYMPTOMS.map((s) => {
+            const active = activeSymptoms.has(s.id);
+            const fromQuery = matchedFromQuery.includes(s.id) && !selected.has(s.id);
             return (
               <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
+                key={s.id}
+                onClick={() => toggleSymptom(s.id)}
                 className={
                   "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold transition-colors " +
                   (active
-                    ? "bg-white text-brand"
+                    ? fromQuery
+                      ? "bg-status-amber text-brand"
+                      : "bg-white text-brand"
                     : "border border-white/10 bg-white/10 text-white/80")
                 }
               >
-                {f}
+                {active && <Check className="-ml-0.5 mr-1 inline h-3 w-3" />}
+                {s.id}
               </button>
             );
           })}
@@ -114,7 +308,7 @@ function Index() {
             />
             <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
               <span className="size-1.5 animate-pulse-slow rounded-full bg-status-green" />
-              LIVE UPDATING
+              실시간 갱신 중
             </div>
           </div>
         </section>
@@ -123,168 +317,167 @@ function Index() {
         <section className="space-y-4">
           <div className="flex items-end justify-between">
             <h2 className="font-mono text-sm font-bold uppercase tracking-tight text-muted-foreground">
-              Optimal Recommendations
+              추천 응급실 ({filteredHospitals.length})
             </h2>
             <span className="font-mono text-[10px] text-muted-foreground">
-              Updated 14:22:05
+              {activeSymptoms.size > 0
+                ? `${activeSymptoms.size}개 증상 필터`
+                : "전체 표시"}
             </span>
           </div>
 
+          {!top && (
+            <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              선택한 증상을 모두 수용 가능한 병원이 현재 없습니다.
+              <br />
+              증상을 줄이거나 반경을 확장해 주세요.
+            </div>
+          )}
+
           {/* Top card */}
-          <article
-            className="animate-entrance relative rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand"
-            style={{ animationDelay: "100ms" }}
-          >
-            <div className="absolute -top-3 left-4 rounded-full bg-brand px-3 py-1 font-mono text-[10px] font-black italic tracking-tighter text-brand-foreground">
-              RECOMMENDED #1
-            </div>
-
-            <div className="mb-4 flex items-start justify-between">
-              <div className="space-y-1">
-                <h3 className="text-xl font-black tracking-tight">
-                  {TOP_HOSPITAL.name}
-                </h3>
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <span>{TOP_HOSPITAL.address}</span>
-                  <span className="h-2 w-px bg-border" />
-                  <span className="font-semibold text-brand">{TOP_HOSPITAL.eta}</span>
-                </div>
+          {top && (
+            <article
+              className="animate-entrance relative rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand"
+              style={{ animationDelay: "100ms" }}
+            >
+              <div className="absolute -top-3 left-4 rounded-full bg-brand px-3 py-1 font-mono text-[10px] font-black italic tracking-tighter text-brand-foreground">
+                추천 1순위
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-black leading-none text-brand">
-                  {TOP_HOSPITAL.score}
-                </div>
-                <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
-                  Match Score
-                </div>
-              </div>
-            </div>
 
-            <div className="mb-4 grid grid-cols-3 gap-2">
-              <BedStat
-                label="ER Beds"
-                tone="green"
-                value={TOP_HOSPITAL.beds.er.value}
-                total={TOP_HOSPITAL.beds.er.total}
-                state="여유"
-              />
-              <BedStat
-                label="ICU"
-                tone="neutral"
-                value={TOP_HOSPITAL.beds.icu.value}
-                total={TOP_HOSPITAL.beds.icu.total}
-                state="보통"
-              />
-              <BedStat
-                label="OR"
-                tone="neutral"
-                value={TOP_HOSPITAL.beds.or.value}
-                total={TOP_HOSPITAL.beds.or.total}
-                state="가능"
-              />
-            </div>
-
-            <div className="mb-5 flex flex-wrap gap-1.5">
-              {TOP_HOSPITAL.capabilities.map((c) => (
-                <span
-                  key={c}
-                  className="rounded bg-brand/5 px-2 py-1 text-[10px] font-bold text-brand ring-1 ring-brand/10"
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95">
-                <Phone className="h-4 w-4" />
-                전화 연결
-              </button>
-              <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95">
-                <Navigation className="h-4 w-4" />
-                길찾기
-              </button>
-            </div>
-          </article>
-
-          {/* Secondary card */}
-          <article
-            className="animate-entrance rounded-2xl bg-card p-4 ring-1 ring-black/5"
-            style={{ animationDelay: "200ms" }}
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-bold tracking-tight">
-                  {SECOND_HOSPITAL.name}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {SECOND_HOSPITAL.address}
-                </p>
-              </div>
-              <span className="rounded bg-status-amber/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-amber">
-                CAUTION
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex gap-6">
-                <div>
-                  <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                    ER Status
-                  </p>
-                  <p className="text-xl font-black text-status-amber">
-                    {String(SECOND_HOSPITAL.er).padStart(2, "0")}
-                    <span className="text-xs font-normal opacity-50">
-                      /{SECOND_HOSPITAL.erTotal}
+              <div className="mb-4 flex items-start justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black tracking-tight">{top.name}</h3>
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <span>
+                      {top.address} · {top.distanceKm}km
                     </span>
-                  </p>
+                    <span className="h-2 w-px bg-border" />
+                    <span className="font-semibold text-brand">
+                      구급차 {top.etaMin}분
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
-                    Score
-                  </p>
-                  <p className="text-xl font-black">{SECOND_HOSPITAL.score}</p>
+                <div className="text-right">
+                  <div className="text-3xl font-black leading-none text-brand">
+                    {top.score}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
+                    적합도
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  aria-label="전화"
-                  className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
-                >
-                  <Phone className="h-4 w-4" />
-                </button>
-                <button
-                  aria-label="길찾기"
-                  className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
-                >
-                  <Navigation className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </article>
 
-          {/* Tertiary saturated */}
-          <article
-            className="animate-entrance rounded-2xl bg-muted/40 p-4 ring-1 ring-black/5"
-            style={{ animationDelay: "300ms" }}
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-bold tracking-tight text-muted-foreground">
-                  {THIRD_HOSPITAL.name}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {THIRD_HOSPITAL.address}
-                </p>
+              <div className="mb-4 grid grid-cols-3 gap-2">
+                <BedStat label="응급실" tone="green" value={top.er.value} total={top.er.total} state="여유" />
+                <BedStat label="중환자실" tone="neutral" value={top.icu.value} total={top.icu.total} state="보통" />
+                <BedStat label="수술실" tone="neutral" value={top.or.value} total={top.or.total} state="가능" />
               </div>
-              <span className="rounded bg-status-red/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-red">
-                SATURATED
-              </span>
-            </div>
-            <div className="flex items-start gap-2 rounded-lg border border-status-red/15 bg-status-red/5 p-2 text-xs font-medium text-status-red">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-              <span>{THIRD_HOSPITAL.message}</span>
-            </div>
-          </article>
+
+              <div className="mb-5 flex flex-wrap gap-1.5">
+                {top.capabilities.map((c) => (
+                  <span
+                    key={c}
+                    className={
+                      "rounded px-2 py-1 text-[10px] font-bold ring-1 " +
+                      (activeSymptoms.has(c)
+                        ? "bg-brand text-brand-foreground ring-brand"
+                        : "bg-brand/5 text-brand ring-brand/10")
+                    }
+                  >
+                    {c} 수용가능
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95">
+                  <Phone className="h-4 w-4" />
+                  전화 연결
+                </button>
+                <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95">
+                  <Navigation className="h-4 w-4" />
+                  길찾기
+                </button>
+              </div>
+            </article>
+          )}
+
+          {/* Rest cards */}
+          {rest.map((h, i) => (
+            <article
+              key={h.name}
+              className={
+                "animate-entrance rounded-2xl p-4 ring-1 ring-black/5 " +
+                (h.status === "saturated" ? "bg-muted/40" : "bg-card")
+              }
+              style={{ animationDelay: `${200 + i * 100}ms` }}
+            >
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <h3
+                    className={
+                      "text-lg font-bold tracking-tight " +
+                      (h.status === "saturated" ? "text-muted-foreground" : "")
+                    }
+                  >
+                    {h.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {h.address} · {h.distanceKm}km · {h.etaMin}분
+                  </p>
+                </div>
+                <StatusBadge status={h.status} />
+              </div>
+
+              {h.status === "saturated" ? (
+                <div className="flex items-start gap-2 rounded-lg border border-status-red/15 bg-status-red/5 p-2 text-xs font-medium text-status-red">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                  <span>{h.message ?? "수용 불가"}</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-6">
+                    <div>
+                      <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                        응급실
+                      </p>
+                      <p
+                        className={
+                          "text-xl font-black " +
+                          (h.status === "caution" ? "text-status-amber" : "text-status-green")
+                        }
+                      >
+                        {String(h.er.value).padStart(2, "0")}
+                        <span className="text-xs font-normal opacity-50">
+                          /{h.er.total}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[10px] font-bold uppercase text-muted-foreground">
+                        적합도
+                      </p>
+                      <p className="text-xl font-black">{h.score}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      aria-label="전화"
+                      className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
+                    >
+                      <Phone className="h-4 w-4" />
+                    </button>
+                    <button
+                      aria-label="길찾기"
+                      className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
+                    >
+                      <Navigation className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </article>
+          ))}
 
           <button className="flex w-full items-center justify-center gap-1 py-3 font-mono text-xs font-bold text-muted-foreground">
             반경 확장 후 더 보기
@@ -307,6 +500,26 @@ function Index() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  if (status === "available")
+    return (
+      <span className="rounded bg-status-green/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-green">
+        수용가능
+      </span>
+    );
+  if (status === "caution")
+    return (
+      <span className="rounded bg-status-amber/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-amber">
+        주의
+      </span>
+    );
+  return (
+    <span className="rounded bg-status-red/10 px-2 py-1 font-mono text-[10px] font-black uppercase text-status-red">
+      포화
+    </span>
   );
 }
 

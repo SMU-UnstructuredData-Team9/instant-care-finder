@@ -88,6 +88,8 @@ type Status = "available" | "caution" | "saturated";
 interface Hospital {
   name: string;
   address: string;
+  lat: number;
+  lng: number;
   distanceKm: number;
   etaMin: number;
   score: number;
@@ -103,6 +105,8 @@ const HOSPITALS: Hospital[] = [
   {
     name: "서울성심중앙병원",
     address: "강남구 삼성로",
+    lat: 37.5108,
+    lng: 127.0594,
     distanceKm: 1.2,
     etaMin: 6,
     score: 98,
@@ -115,6 +119,8 @@ const HOSPITALS: Hospital[] = [
   {
     name: "연세의료원 강남",
     address: "강남구 도곡로",
+    lat: 37.4894,
+    lng: 127.0470,
     distanceKm: 2.8,
     etaMin: 12,
     score: 84,
@@ -127,6 +133,8 @@ const HOSPITALS: Hospital[] = [
   {
     name: "강남삼성병원",
     address: "강남구 일원로",
+    lat: 37.4881,
+    lng: 127.0856,
     distanceKm: 4.5,
     etaMin: 22,
     score: 41,
@@ -140,6 +148,9 @@ const HOSPITALS: Hospital[] = [
   {
     name: "한양대학교병원",
     address: "성동구 왕십리로",
+    lat: 37.5586,
+    lng: 127.0440,
+
     distanceKm: 6.1,
     etaMin: 18,
     score: 76,

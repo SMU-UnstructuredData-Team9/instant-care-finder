@@ -523,7 +523,7 @@ function Index() {
         {/* 실시간 지도 */}
         <section className="animate-entrance overflow-hidden rounded-2xl ring-1 ring-black/5">
           <div className="relative h-56 w-full">
-            <LiveMap coords={coords} hospitals={filteredHospitals} />
+            <LiveMap coords={coords} hospitals={filteredHospitals} onHospitalClick={setDetail} />
             <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
               <span className="size-1.5 animate-pulse-slow rounded-full bg-status-green" />
               실시간 갱신 중

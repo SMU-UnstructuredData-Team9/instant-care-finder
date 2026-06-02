@@ -11,8 +11,9 @@ import {
   Pencil,
   Check,
 } from "lucide-react";
-import L from "leaflet";
+import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
+
 
 
 export const Route = createFileRoute("/")({

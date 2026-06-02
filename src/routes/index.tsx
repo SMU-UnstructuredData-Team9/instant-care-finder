@@ -10,6 +10,7 @@ import {
   LocateFixed,
   Pencil,
   Check,
+  X,
 } from "lucide-react";
 import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -174,6 +175,51 @@ const HOSPITAL_TEMPLATES = [
     or: { value: 0, total: 5 },
     capabilities: ["일반응급", "심근경색", "응급수술"] as SymptomId[],
   },
+  {
+    suffix: "권역응급의료센터",
+    dxKm: 18,
+    dyKm: -12,
+    score: 81,
+    status: "available" as Status,
+    er: { value: 9, total: 50 },
+    icu: { value: 3, total: 16 },
+    or: { value: 2, total: 10 },
+    capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술"] as SymptomId[],
+  },
+  {
+    suffix: "권역외상센터",
+    dxKm: -25,
+    dyKm: 32,
+    score: 88,
+    status: "available" as Status,
+    er: { value: 14, total: 60 },
+    icu: { value: 5, total: 20 },
+    or: { value: 4, total: 12 },
+    capabilities: ["중증외상", "응급수술", "화상", "심근경색"] as SymptomId[],
+  },
+  {
+    suffix: "국립대학교병원",
+    dxKm: 55,
+    dyKm: -40,
+    score: 92,
+    status: "available" as Status,
+    er: { value: 18, total: 70 },
+    icu: { value: 6, total: 24 },
+    or: { value: 5, total: 14 },
+    capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술", "소아응급", "화상", "중독"] as SymptomId[],
+  },
+  {
+    suffix: "특수질환센터 (서울)",
+    dxKm: 80,
+    dyKm: 90,
+    score: 95,
+    status: "available" as Status,
+    er: { value: 22, total: 80 },
+    icu: { value: 8, total: 30 },
+    or: { value: 6, total: 16 },
+    capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술", "소아응급", "화상", "중독"] as SymptomId[],
+    message: "희귀·특수질환 전국 단위 전원 가능",
+  },
 ];
 
 // 위경도 1도 ≈ 111km. 동쪽 거리는 위도에 따라 cos(lat) 보정.
@@ -233,6 +279,7 @@ function Index() {
   const [editingLoc, setEditingLoc] = useState(false);
   const [manualLoc, setManualLoc] = useState("");
   const [radiusKm, setRadiusKm] = useState(5);
+  const [detail, setDetail] = useState<Hospital | null>(null);
 
 
   // 좌표 → 도로명 주소 + 도시명
@@ -370,7 +417,7 @@ function Index() {
 
   const top = filteredHospitals[0];
   const rest = filteredHospitals.slice(1);
-  const canExpand = radiusKm < 30 && allHospitals.length > filteredHospitals.length;
+  const canExpand = allHospitals.length > filteredHospitals.length;
 
 
   return (
@@ -476,7 +523,7 @@ function Index() {
         {/* 실시간 지도 */}
         <section className="animate-entrance overflow-hidden rounded-2xl ring-1 ring-black/5">
           <div className="relative h-56 w-full">
-            <LiveMap coords={coords} hospitals={filteredHospitals} />
+            <LiveMap coords={coords} hospitals={filteredHospitals} onHospitalClick={setDetail} />
             <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
               <span className="size-1.5 animate-pulse-slow rounded-full bg-status-green" />
               실시간 갱신 중
@@ -509,7 +556,8 @@ function Index() {
           {/* Top card */}
           {top && (
             <article
-              className="animate-entrance relative rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand"
+              onClick={() => setDetail(top)}
+              className="animate-entrance relative cursor-pointer rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand transition hover:shadow-2xl"
               style={{ animationDelay: "100ms" }}
             >
               <div className="absolute -top-3 left-4 rounded-full bg-brand px-3 py-1 font-mono text-[10px] font-black italic tracking-tighter text-brand-foreground">
@@ -562,11 +610,17 @@ function Index() {
               </div>
 
               <div className="flex gap-2">
-                <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95">
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95"
+                >
                   <Phone className="h-4 w-4" />
                   전화 연결
                 </button>
-                <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95">
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95"
+                >
                   <Navigation className="h-4 w-4" />
                   길찾기
                 </button>
@@ -578,8 +632,9 @@ function Index() {
           {rest.map((h, i) => (
             <article
               key={h.name}
+              onClick={() => setDetail(h)}
               className={
-                "animate-entrance rounded-2xl p-4 ring-1 ring-black/5 " +
+                "animate-entrance cursor-pointer rounded-2xl p-4 ring-1 ring-black/5 transition hover:ring-brand/40 " +
                 (h.status === "saturated" ? "bg-muted/40" : "bg-card")
               }
               style={{ animationDelay: `${200 + i * 100}ms` }}
@@ -634,12 +689,14 @@ function Index() {
                   </div>
                   <div className="flex gap-2">
                     <button
+                      onClick={(e) => e.stopPropagation()}
                       aria-label="전화"
                       className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
                     >
                       <Phone className="h-4 w-4" />
                     </button>
                     <button
+                      onClick={(e) => e.stopPropagation()}
                       aria-label="길찾기"
                       className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
                     >
@@ -652,13 +709,13 @@ function Index() {
           ))}
 
           <button
-            onClick={() => setRadiusKm((r) => Math.min(r + 10, 30))}
+            onClick={() => setRadiusKm((r) => r + 5)}
             disabled={!canExpand}
             className="flex w-full items-center justify-center gap-1 py-3 font-mono text-xs font-bold text-muted-foreground disabled:opacity-40"
           >
             {canExpand
-              ? `반경 ${radiusKm}km → ${Math.min(radiusKm + 10, 30)}km 확장`
-              : `최대 반경 ${radiusKm}km — 더 이상 결과 없음`}
+              ? `반경 ${radiusKm}km → ${radiusKm + 5}km 확장 (제한 없음)`
+              : `반경 ${radiusKm}km — 더 늘려도 결과 없음`}
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
 
@@ -678,6 +735,124 @@ function Index() {
           </span>
         </div>
       </footer>
+
+      <HospitalDetailModal hospital={detail} onClose={() => setDetail(null)} activeSymptoms={activeSymptoms} />
+    </div>
+  );
+}
+
+function HospitalDetailModal({
+  hospital,
+  onClose,
+  activeSymptoms,
+}: {
+  hospital: Hospital | null;
+  onClose: () => void;
+  activeSymptoms: Set<SymptomId>;
+}) {
+  if (!hospital) return null;
+  const h = hospital;
+  const statusLabel =
+    h.status === "available" ? "수용 가능" : h.status === "caution" ? "주의 (잔여 부족)" : "포화 / 수용 불가";
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="animate-entrance max-h-[90vh] w-full max-w-[480px] overflow-y-auto rounded-t-3xl bg-card p-5 shadow-2xl sm:rounded-3xl"
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2">
+              <StatusBadge status={h.status} />
+              <span className="font-mono text-[10px] font-bold text-muted-foreground">
+                적합도 {h.score}
+              </span>
+            </div>
+            <h2 className="text-2xl font-black tracking-tight">{h.name}</h2>
+            <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {h.address}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="닫기"
+            className="flex size-9 flex-shrink-0 items-center justify-center rounded-full bg-muted active:scale-95"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl bg-muted/40 p-3">
+          <DetailMetric label="거리" value={`${h.distanceKm}km`} />
+          <DetailMetric label="구급차" value={`${h.etaMin}분`} />
+          <DetailMetric label="상태" value={statusLabel} small />
+        </div>
+
+        {h.message && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-status-amber/20 bg-status-amber/10 p-3 text-xs font-medium text-foreground">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-status-amber" />
+            <span>{h.message}</span>
+          </div>
+        )}
+
+        <div className="mb-4">
+          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            실시간 병상 현황
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            <BedStat label="응급실" tone={h.er.value > 0 ? "green" : "red"} value={h.er.value} total={h.er.total} state={h.er.value > 0 ? "가용" : "포화"} />
+            <BedStat label="중환자실" tone={h.icu.value > 0 ? "green" : "red"} value={h.icu.value} total={h.icu.total} state={h.icu.value > 0 ? "가용" : "포화"} />
+            <BedStat label="수술실" tone={h.or.value > 0 ? "green" : "red"} value={h.or.value} total={h.or.total} state={h.or.value > 0 ? "가능" : "포화"} />
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            수용 가능 진료군
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {h.capabilities.map((c) => (
+              <span
+                key={c}
+                className={
+                  "rounded-md px-2 py-1 text-[11px] font-bold ring-1 " +
+                  (activeSymptoms.has(c)
+                    ? "bg-brand text-brand-foreground ring-brand"
+                    : "bg-brand/5 text-brand ring-brand/10")
+                }
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground active:scale-95">
+            <Phone className="h-4 w-4" />
+            전화 연결
+          </button>
+          <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border active:scale-95">
+            <Navigation className="h-4 w-4" />
+            길찾기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailMetric({ label, value, small }: { label: string; value: string; small?: boolean }) {
+  return (
+    <div className="text-center">
+      <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
+      <p className={"mt-1 font-black tracking-tight " + (small ? "text-xs" : "text-lg")}>{value}</p>
     </div>
   );
 }
@@ -705,9 +880,11 @@ function StatusBadge({ status }: { status: Status }) {
 function LiveMap({
   coords,
   hospitals,
+  onHospitalClick,
 }: {
   coords: { lat: number; lng: number } | null;
   hospitals: Hospital[];
+  onHospitalClick?: (h: Hospital) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);
@@ -784,7 +961,8 @@ function LiveMap({
         iconAnchor: [size / 2, size / 2],
       });
       L.marker([h.lat, h.lng], { icon })
-        .bindPopup(`<b>${h.name}</b><br/>${h.address}`)
+        .bindPopup(`<b>${h.name}</b><br/>${h.address}<br/><i>탭하면 상세 정보</i>`)
+        .on("click", () => onHospitalClick?.(h))
         .addTo(layer);
       points.push([h.lat, h.lng]);
     });
@@ -792,7 +970,7 @@ function LiveMap({
     if (points.length > 0) {
       map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
     }
-  }, [coords, hospitals, ready]);
+  }, [coords, hospitals, ready, onHospitalClick]);
 
   return <div ref={ref} className="h-full w-full" />;
 }

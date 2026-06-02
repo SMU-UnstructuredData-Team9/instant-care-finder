@@ -611,26 +611,37 @@ function LiveMap({
   hospitals: Hospital[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
+  const mapRef = useRef<Leaflet.Map | null>(null);
+  const layerRef = useRef<Leaflet.LayerGroup | null>(null);
+  const LRef = useRef<typeof Leaflet | null>(null);
+  const [ready, setReady] = useState(false);
 
-  // 지도 초기화 (1회)
+  // 지도 초기화 (브라우저에서만 — SSR 회피용 동적 import)
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
-    const map = L.map(ref.current, {
-      center: [37.5, 127.04],
-      zoom: 12,
-      zoomControl: false,
-      attributionControl: false,
-    });
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      { maxZoom: 19 },
-    ).addTo(map);
-    layerRef.current = L.layerGroup().addTo(map);
-    mapRef.current = map;
+    let cancelled = false;
+    (async () => {
+      const mod = await import("leaflet");
+      const L = mod.default;
+      if (cancelled || !ref.current) return;
+      LRef.current = L;
+      const map = L.map(ref.current, {
+        center: [37.5, 127.04],
+        zoom: 12,
+        zoomControl: false,
+        attributionControl: false,
+      });
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { maxZoom: 19 },
+      ).addTo(map);
+      layerRef.current = L.layerGroup().addTo(map);
+      mapRef.current = map;
+      setReady(true);
+    })();
     return () => {
-      map.remove();
+      cancelled = true;
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
@@ -639,10 +650,11 @@ function LiveMap({
   useEffect(() => {
     const map = mapRef.current;
     const layer = layerRef.current;
-    if (!map || !layer) return;
+    const L = LRef.current;
+    if (!map || !layer || !L || !ready) return;
     layer.clearLayers();
 
-    const points: L.LatLngExpression[] = [];
+    const points: Leaflet.LatLngExpression[] = [];
 
     if (coords) {
       const meIcon = L.divIcon({
@@ -681,10 +693,11 @@ function LiveMap({
     if (points.length > 0) {
       map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
     }
-  }, [coords, hospitals]);
+  }, [coords, hospitals, ready]);
 
   return <div ref={ref} className="h-full w-full" />;
 }
+
 
 function BedStat({
   label,

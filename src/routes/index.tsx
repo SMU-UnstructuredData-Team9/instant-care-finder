@@ -11,8 +11,9 @@ import {
   Pencil,
   Check,
 } from "lucide-react";
-import L from "leaflet";
+import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
+
 
 
 export const Route = createFileRoute("/")({
@@ -103,77 +104,138 @@ interface Hospital {
   message?: string;
 }
 
-const HOSPITALS: Hospital[] = [
+// 병원 템플릿 — 사용자 위치 주변에 상대적으로 배치됨.
+// dx/dy: 사용자 위치에서의 동/북 방향 오프셋(km). 실제 거리/도착시간은 좌표로 계산.
+const HOSPITAL_TEMPLATES = [
   {
-    name: "서울성심중앙병원",
-    address: "강남구 삼성로",
-    lat: 37.5108,
-    lng: 127.0594,
-    distanceKm: 1.2,
-    etaMin: 6,
+    suffix: "성심중앙병원",
+    dxKm: 0.4,
+    dyKm: 0.9,
     score: 98,
-    status: "available",
+    status: "available" as Status,
     er: { value: 12, total: 45 },
     icu: { value: 4, total: 12 },
     or: { value: 2, total: 8 },
-    capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"],
+    capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"] as SymptomId[],
   },
   {
-    name: "연세의료원 강남",
-    address: "강남구 도곡로",
-    lat: 37.4894,
-    lng: 127.0470,
-    distanceKm: 2.8,
-    etaMin: 12,
+    suffix: "의료원",
+    dxKm: -1.8,
+    dyKm: -1.4,
     score: 84,
-    status: "caution",
+    status: "caution" as Status,
     er: { value: 3, total: 32 },
     icu: { value: 1, total: 10 },
     or: { value: 1, total: 6 },
-    capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"],
+    capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"] as SymptomId[],
   },
   {
-    name: "강남삼성병원",
-    address: "강남구 일원로",
-    lat: 37.4881,
-    lng: 127.0856,
-    distanceKm: 4.5,
-    etaMin: 22,
+    suffix: "삼성병원",
+    dxKm: 2.6,
+    dyKm: -2.2,
     score: 41,
-    status: "saturated",
+    status: "saturated" as Status,
     er: { value: 0, total: 40 },
     icu: { value: 0, total: 14 },
     or: { value: 0, total: 8 },
-    capabilities: ["뇌출혈", "중증외상", "응급수술"],
+    capabilities: ["뇌출혈", "중증외상", "응급수술"] as SymptomId[],
     message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
   },
   {
-    name: "한양대학교병원",
-    address: "성동구 왕십리로",
-    lat: 37.5586,
-    lng: 127.0440,
-
-    distanceKm: 6.1,
-    etaMin: 18,
+    suffix: "대학교병원",
+    dxKm: -3.4,
+    dyKm: 4.6,
     score: 76,
-    status: "available",
+    status: "available" as Status,
     er: { value: 8, total: 36 },
     icu: { value: 2, total: 12 },
     or: { value: 3, total: 8 },
-    capabilities: ["일반응급", "화상", "중독", "응급수술"],
+    capabilities: ["일반응급", "화상", "중독", "응급수술"] as SymptomId[],
+  },
+  {
+    suffix: "중앙의료원",
+    dxKm: 6.2,
+    dyKm: 5.8,
+    score: 68,
+    status: "available" as Status,
+    er: { value: 6, total: 30 },
+    icu: { value: 1, total: 8 },
+    or: { value: 1, total: 6 },
+    capabilities: ["일반응급", "소아응급", "뇌졸중"] as SymptomId[],
+  },
+  {
+    suffix: "성모병원",
+    dxKm: -7.5,
+    dyKm: 2.1,
+    score: 72,
+    status: "caution" as Status,
+    er: { value: 2, total: 28 },
+    icu: { value: 1, total: 9 },
+    or: { value: 0, total: 5 },
+    capabilities: ["일반응급", "심근경색", "응급수술"] as SymptomId[],
   },
 ];
+
+// 위경도 1도 ≈ 111km. 동쪽 거리는 위도에 따라 cos(lat) 보정.
+function offsetCoords(lat: number, lng: number, dxKm: number, dyKm: number) {
+  const dLat = dyKm / 111;
+  const dLng = dxKm / (111 * Math.cos((lat * Math.PI) / 180));
+  return { lat: lat + dLat, lng: lng + dLng };
+}
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function generateHospitals(
+  coords: { lat: number; lng: number } | null,
+  cityName: string,
+): Hospital[] {
+  if (!coords) return [];
+  return HOSPITAL_TEMPLATES.map((t) => {
+    const pos = offsetCoords(coords.lat, coords.lng, t.dxKm, t.dyKm);
+    const distance = haversineKm(coords, pos);
+    // 구급차 평균 40km/h 가정 + 출동 2분
+    const eta = Math.max(3, Math.round((distance / 40) * 60 + 2));
+    return {
+      name: `${cityName}${t.suffix}`,
+      address: `${cityName} 응급의료센터`,
+      lat: pos.lat,
+      lng: pos.lng,
+      distanceKm: Math.round(distance * 10) / 10,
+      etaMin: eta,
+      score: t.score,
+      status: t.status,
+      er: t.er,
+      icu: t.icu,
+      or: t.or,
+      capabilities: t.capabilities,
+      message: t.message,
+    };
+  });
+}
+
 
 function Index() {
   const [selected, setSelected] = useState<Set<SymptomId>>(new Set());
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("위치 확인 중…");
+  const [cityName, setCityName] = useState("지역");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(true);
   const [editingLoc, setEditingLoc] = useState(false);
   const [manualLoc, setManualLoc] = useState("");
+  const [radiusKm, setRadiusKm] = useState(5);
 
-  // 좌표 → 도로명 주소 (OpenStreetMap Nominatim, 무료/무인증)
+
+  // 좌표 → 도로명 주소 + 도시명
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
@@ -181,17 +243,22 @@ function Index() {
       );
       const data = await res.json();
       const a = data.address ?? {};
+      const city = a.city || a.county || a.town || a.province || "지역";
       const parts = [
         a.city || a.county || a.province,
         a.borough || a.city_district || a.suburb,
         a.road,
         a.house_number,
       ].filter(Boolean);
-      return parts.length ? parts.join(" ") : (data.display_name as string);
+      return {
+        address: parts.length ? parts.join(" ") : (data.display_name as string),
+        city,
+      };
     } catch {
       return null;
     }
   };
+
 
   const acquireLocation = async () => {
     setLocating(true);
@@ -206,14 +273,20 @@ function Index() {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setCoords({ lat, lng });
-        const addr = await reverseGeocode(lat, lng);
-        setLocation(addr ?? `현재 위치 (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
+        const result = await reverseGeocode(lat, lng);
+        if (result) {
+          setLocation(result.address);
+          setCityName(result.city);
+        } else {
+          setLocation(`현재 위치 (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
+        }
         setLocating(false);
       },
       () => {
         // 권한 거부 시 강남 기본값으로 폴백
         setCoords({ lat: 37.5006, lng: 127.0364 });
         setLocation("서울 강남구 테헤란로 427");
+        setCityName("강남구");
         setLocating(false);
       },
       { timeout: 8000 },
@@ -230,19 +303,23 @@ function Index() {
     if (q.length === 0) return;
     setLocation(q);
     setEditingLoc(false);
-    // 입력한 주소를 좌표로 변환 (forward geocoding)
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ko&limit=1`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ko&limit=1&addressdetails=1`,
       );
       const data = await res.json();
       if (data[0]) {
-        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setCoords({ lat, lng });
+        const a = data[0].address ?? {};
+        setCityName(a.city || a.county || a.town || a.province || q);
       }
     } catch {
       /* 무시 */
     }
   };
+
 
 
   const toggleSymptom = (id: SymptomId) => {
@@ -269,16 +346,32 @@ function Index() {
     return s;
   }, [selected, matchedFromQuery]);
 
+  // 사용자 위치 주변에 병원 생성 + 반경 필터 + 증상 필터
+  const allHospitals = useMemo(
+    () => generateHospitals(coords, cityName),
+    [coords, cityName],
+  );
+
   const filteredHospitals = useMemo(() => {
-    if (activeSymptoms.size === 0) return HOSPITALS;
-    // 가능성이 여러 개일 수 있으므로 OR 매칭: 후보 중 하나라도 수용 가능하면 표시
-    return HOSPITALS.filter((h) =>
-      [...activeSymptoms].some((s) => h.capabilities.includes(s)),
-    );
-  }, [activeSymptoms]);
+    let list = allHospitals.filter((h) => h.distanceKm <= radiusKm);
+    if (activeSymptoms.size > 0) {
+      list = list.filter((h) =>
+        [...activeSymptoms].some((s) => h.capabilities.includes(s)),
+      );
+    }
+    // 가까운 + 가용한 순으로 정렬
+    return list.sort((a, b) => {
+      const statusRank = { available: 0, caution: 1, saturated: 2 } as const;
+      const sd = statusRank[a.status] - statusRank[b.status];
+      if (sd !== 0) return sd;
+      return a.distanceKm - b.distanceKm;
+    });
+  }, [allHospitals, radiusKm, activeSymptoms]);
 
   const top = filteredHospitals[0];
   const rest = filteredHospitals.slice(1);
+  const canExpand = radiusKm < 30 && allHospitals.length > filteredHospitals.length;
+
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background text-foreground">
@@ -558,10 +651,17 @@ function Index() {
             </article>
           ))}
 
-          <button className="flex w-full items-center justify-center gap-1 py-3 font-mono text-xs font-bold text-muted-foreground">
-            반경 확장 후 더 보기
+          <button
+            onClick={() => setRadiusKm((r) => Math.min(r + 10, 30))}
+            disabled={!canExpand}
+            className="flex w-full items-center justify-center gap-1 py-3 font-mono text-xs font-bold text-muted-foreground disabled:opacity-40"
+          >
+            {canExpand
+              ? `반경 ${radiusKm}km → ${Math.min(radiusKm + 10, 30)}km 확장`
+              : `최대 반경 ${radiusKm}km — 더 이상 결과 없음`}
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
+
         </section>
       </main>
 
@@ -610,26 +710,37 @@ function LiveMap({
   hospitals: Hospital[];
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
+  const mapRef = useRef<Leaflet.Map | null>(null);
+  const layerRef = useRef<Leaflet.LayerGroup | null>(null);
+  const LRef = useRef<typeof Leaflet | null>(null);
+  const [ready, setReady] = useState(false);
 
-  // 지도 초기화 (1회)
+  // 지도 초기화 (브라우저에서만 — SSR 회피용 동적 import)
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
-    const map = L.map(ref.current, {
-      center: [37.5, 127.04],
-      zoom: 12,
-      zoomControl: false,
-      attributionControl: false,
-    });
-    L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      { maxZoom: 19 },
-    ).addTo(map);
-    layerRef.current = L.layerGroup().addTo(map);
-    mapRef.current = map;
+    let cancelled = false;
+    (async () => {
+      const mod = await import("leaflet");
+      const L = mod.default;
+      if (cancelled || !ref.current) return;
+      LRef.current = L;
+      const map = L.map(ref.current, {
+        center: [37.5, 127.04],
+        zoom: 12,
+        zoomControl: false,
+        attributionControl: false,
+      });
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { maxZoom: 19 },
+      ).addTo(map);
+      layerRef.current = L.layerGroup().addTo(map);
+      mapRef.current = map;
+      setReady(true);
+    })();
     return () => {
-      map.remove();
+      cancelled = true;
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
@@ -638,10 +749,11 @@ function LiveMap({
   useEffect(() => {
     const map = mapRef.current;
     const layer = layerRef.current;
-    if (!map || !layer) return;
+    const L = LRef.current;
+    if (!map || !layer || !L || !ready) return;
     layer.clearLayers();
 
-    const points: L.LatLngExpression[] = [];
+    const points: Leaflet.LatLngExpression[] = [];
 
     if (coords) {
       const meIcon = L.divIcon({
@@ -680,10 +792,11 @@ function LiveMap({
     if (points.length > 0) {
       map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
     }
-  }, [coords, hospitals]);
+  }, [coords, hospitals, ready]);
 
   return <div ref={ref} className="h-full w-full" />;
 }
+
 
 function BedStat({
   label,

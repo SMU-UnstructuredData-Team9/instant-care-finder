@@ -26,38 +26,32 @@ const FILTERS = ["전체", "심근경색", "뇌졸중", "뇌출혈", "중증외�
 
 type Status = "available" | "caution" | "saturated";
 
-const HOSPITALS = [
-  {
-    rank: 1,
-    name: "서울성심중앙병원",
-    address: "강남구 삼성로 · 1.2km",
-    eta: "구급차 6분",
-    score: 98,
-    status: "available" as Status,
-    beds: {
-      er: { value: 12, total: 45 },
-      icu: { value: 4, total: 12 },
-      or: { value: 2, total: 8 },
-    },
-    capabilities: ["심근경색 수용가능", "24시간 응급수술", "뇌출혈 가능"],
+const TOP_HOSPITAL = {
+  name: "서울성심중앙병원",
+  address: "강남구 삼성로 · 1.2km",
+  eta: "구급차 6분",
+  score: 98,
+  beds: {
+    er: { value: 12, total: 45 },
+    icu: { value: 4, total: 12 },
+    or: { value: 2, total: 8 },
   },
-  {
-    rank: 2,
-    name: "연세의료원 강남",
-    address: "강남구 도곡로 · 2.8km · 12분",
-    score: 84,
-    status: "caution" as Status,
-    er: 3,
-    erTotal: 32,
-  },
-  {
-    rank: 3,
-    name: "강남삼성병원",
-    address: "강남구 일원로 · 4.5km · 22분",
-    status: "saturated" as Status,
-    message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
-  },
-];
+  capabilities: ["심근경색 수용가능", "24시간 응급수술", "뇌출혈 가능"],
+};
+
+const SECOND_HOSPITAL = {
+  name: "연세의료원 강남",
+  address: "강남구 도곡로 · 2.8km · 12분",
+  score: 84,
+  er: 3,
+  erTotal: 32,
+};
+
+const THIRD_HOSPITAL = {
+  name: "강남삼성병원",
+  address: "강남구 일원로 · 4.5km · 22분",
+  message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
+};
 
 function Index() {
   const [activeFilter, setActiveFilter] = useState<string>("전체");

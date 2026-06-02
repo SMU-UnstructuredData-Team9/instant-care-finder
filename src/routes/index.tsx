@@ -57,20 +57,25 @@ const SYMPTOMS = [
     keywords: ["사고", "외상", "출혈", "골절", "추락", "충돌", "가슴", "머리"],
   },
   {
+    id: "일반응급",
+    label: "복통 · 발열 · 일반 응급",
+    keywords: ["복통", "배", "설사", "구토", "발열", "열", "장염", "메스꺼움", "어지러"],
+  },
+  {
     id: "응급수술",
-    label: "복통 · 응급수술",
-    keywords: ["복통", "배", "수술", "맹장", "장폐색", "출혈", "가슴"],
+    label: "응급수술 (맹장 · 장폐색 등)",
+    keywords: ["수술", "맹장", "충수염", "장폐색", "심한 복통", "찢어", "내장"],
   },
   {
     id: "소아응급",
     label: "소아 · 영유아 응급",
-    keywords: ["아이", "소아", "영아", "아기", "열", "경련"],
+    keywords: ["아이", "소아", "영아", "아기", "경련"],
   },
   { id: "화상", label: "화상", keywords: ["화상", "데임", "끓"] },
   {
     id: "중독",
     label: "중독 · 약물",
-    keywords: ["중독", "약물", "음독", "가스", "두통", "구토"],
+    keywords: ["중독", "약물", "음독", "가스"],
   },
 ] as const;
 
@@ -102,7 +107,7 @@ const HOSPITALS: Hospital[] = [
     er: { value: 12, total: 45 },
     icu: { value: 4, total: 12 },
     or: { value: 2, total: 8 },
-    capabilities: ["심근경색", "응급수술", "뇌출혈", "중증외상"],
+    capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"],
   },
   {
     name: "연세의료원 강남",
@@ -114,7 +119,7 @@ const HOSPITALS: Hospital[] = [
     er: { value: 3, total: 32 },
     icu: { value: 1, total: 10 },
     or: { value: 1, total: 6 },
-    capabilities: ["뇌졸중", "심근경색", "소아응급"],
+    capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"],
   },
   {
     name: "강남삼성병원",
@@ -139,7 +144,7 @@ const HOSPITALS: Hospital[] = [
     er: { value: 8, total: 36 },
     icu: { value: 2, total: 12 },
     or: { value: 3, total: 8 },
-    capabilities: ["화상", "중독", "응급수술"],
+    capabilities: ["일반응급", "화상", "중독", "응급수술"],
   },
 ];
 

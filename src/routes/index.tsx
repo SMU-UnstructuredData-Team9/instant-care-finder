@@ -602,6 +602,89 @@ function StatusBadge({ status }: { status: Status }) {
   );
 }
 
+function LiveMap({
+  coords,
+  hospitals,
+}: {
+  coords: { lat: number; lng: number } | null;
+  hospitals: Hospital[];
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
+
+  // 지도 초기화 (1회)
+  useEffect(() => {
+    if (!ref.current || mapRef.current) return;
+    const map = L.map(ref.current, {
+      center: [37.5, 127.04],
+      zoom: 12,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+      { maxZoom: 19 },
+    ).addTo(map);
+    layerRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // 마커 갱신
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer) return;
+    layer.clearLayers();
+
+    const points: L.LatLngExpression[] = [];
+
+    if (coords) {
+      const meIcon = L.divIcon({
+        className: "",
+        html: `<div style="position:relative"><div style="width:18px;height:18px;border-radius:9999px;background:oklch(0.65 0.22 250);border:3px solid white;box-shadow:0 0 0 4px oklch(0.65 0.22 250 / 0.3)"></div></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+      L.marker([coords.lat, coords.lng], { icon: meIcon })
+        .bindPopup("<b>내 위치</b>")
+        .addTo(layer);
+      points.push([coords.lat, coords.lng]);
+    }
+
+    hospitals.forEach((h, i) => {
+      const color =
+        h.status === "available"
+          ? "oklch(0.72 0.17 162)"
+          : h.status === "caution"
+            ? "oklch(0.78 0.17 71)"
+            : "oklch(0.65 0.24 27)";
+      const isTop = i === 0;
+      const size = isTop ? 32 : 26;
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:9999px;background:${color};color:white;font-weight:900;font-size:${isTop ? 13 : 11}px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${i + 1}</div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
+      L.marker([h.lat, h.lng], { icon })
+        .bindPopup(`<b>${h.name}</b><br/>${h.address}`)
+        .addTo(layer);
+      points.push([h.lat, h.lng]);
+    });
+
+    if (points.length > 0) {
+      map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
+    }
+  }, [coords, hospitals]);
+
+  return <div ref={ref} className="h-full w-full" />;
+}
+
 function BedStat({
   label,
   value,

@@ -606,7 +606,7 @@ function Index() {
   return (
     <div className="mx-auto flex min-h-screen max-w-[480px] flex-col bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-brand px-4 pb-4 pt-6 text-brand-foreground">
+      <header className="bg-brand px-4 pb-4 pt-6 text-brand-foreground">
         {/* 위치 영역 */}
         <div className="mb-4">
           <div className="mb-2 flex items-center justify-between">

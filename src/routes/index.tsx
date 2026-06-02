@@ -119,7 +119,7 @@ const HOSPITALS: Hospital[] = [
     er: { value: 3, total: 32 },
     icu: { value: 1, total: 10 },
     or: { value: 1, total: 6 },
-    capabilities: ["뇌졸중", "심근경색", "소아응급"],
+    capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"],
   },
   {
     name: "강남삼성병원",

@@ -880,9 +880,11 @@ function StatusBadge({ status }: { status: Status }) {
 function LiveMap({
   coords,
   hospitals,
+  onHospitalClick,
 }: {
   coords: { lat: number; lng: number } | null;
   hospitals: Hospital[];
+  onHospitalClick?: (h: Hospital) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Leaflet.Map | null>(null);

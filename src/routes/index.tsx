@@ -728,7 +728,7 @@ function Index() {
             </span>
           </div>
 
-          {!top && (
+          {!rank1 && (
             <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
               선택한 증상을 모두 수용 가능한 병원이 현재 없습니다.
               <br />
@@ -736,83 +736,10 @@ function Index() {
             </div>
           )}
 
-          {/* Top card */}
-          {top && (
-            <article
-              onClick={() => setDetail(top)}
-              className="animate-entrance relative cursor-pointer rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand transition hover:shadow-2xl"
-              style={{ animationDelay: "100ms" }}
-            >
-              <div className="absolute -top-3 left-4 rounded-full bg-brand px-3 py-1 font-mono text-[10px] font-black italic tracking-tighter text-brand-foreground">
-                추천 1순위
-              </div>
-
-              <div className="mb-4 flex items-start justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-black tracking-tight">{top.name}</h3>
-                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    <span>
-                      {top.address} · {top.distanceKm}km
-                    </span>
-                    <span className="h-2 w-px bg-border" />
-                    <span className="font-semibold text-brand">
-                      구급차 {top.etaMin}분
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-black leading-none text-brand">
-                    {top.score}
-                  </div>
-                  <div className="mt-1 font-mono text-[10px] font-bold uppercase tracking-tighter text-muted-foreground">
-                    적합도
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4 grid grid-cols-3 gap-2">
-                <BedStat label="응급실" tone="green" value={top.er.value} total={top.er.total} state="여유" />
-                <BedStat label="중환자실" tone="neutral" value={top.icu.value} total={top.icu.total} state="보통" />
-                <BedStat label="수술실" tone="neutral" value={top.or.value} total={top.or.total} state="가능" />
-              </div>
-
-              <div className="mb-5 flex flex-wrap gap-1.5">
-                {top.capabilities.map((c) => (
-                  <span
-                    key={c}
-                    className={
-                      "rounded px-2 py-1 text-[10px] font-bold ring-1 " +
-                      (activeSymptoms.has(c)
-                        ? "bg-brand text-brand-foreground ring-brand"
-                        : "bg-brand/5 text-brand ring-brand/10")
-                    }
-                  >
-                    {c} 수용가능
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDetail(top);
-                  }}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95"
-                >
-                  <Phone className="h-4 w-4" />
-                  전화 연결
-                </button>
-                <button
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95"
-                >
-                  <Navigation className="h-4 w-4" />
-                  길찾기
-                </button>
-              </div>
-            </article>
-          )}
+          {/* Rank 1, 2, 3 cards */}
+          {renderRankCard(rank1, 0)}
+          {renderRankCard(rank2, 1)}
+          {renderRankCard(rank3, 2)}
 
           {/* Rest cards */}
           {rest.map((h, i) => (

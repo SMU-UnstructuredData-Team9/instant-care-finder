@@ -970,7 +970,7 @@ function LiveMap({
     if (points.length > 0) {
       map.fitBounds(L.latLngBounds(points), { padding: [30, 30], maxZoom: 14 });
     }
-  }, [coords, hospitals, ready]);
+  }, [coords, hospitals, ready, onHospitalClick]);
 
   return <div ref={ref} className="h-full w-full" />;
 }

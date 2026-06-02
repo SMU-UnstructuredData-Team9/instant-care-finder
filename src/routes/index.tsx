@@ -273,14 +273,20 @@ function Index() {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setCoords({ lat, lng });
-        const addr = await reverseGeocode(lat, lng);
-        setLocation(addr ?? `현재 위치 (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
+        const result = await reverseGeocode(lat, lng);
+        if (result) {
+          setLocation(result.address);
+          setCityName(result.city);
+        } else {
+          setLocation(`현재 위치 (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
+        }
         setLocating(false);
       },
       () => {
         // 권한 거부 시 강남 기본값으로 폴백
         setCoords({ lat: 37.5006, lng: 127.0364 });
         setLocation("서울 강남구 테헤란로 427");
+        setCityName("강남구");
         setLocating(false);
       },
       { timeout: 8000 },
@@ -297,19 +303,23 @@ function Index() {
     if (q.length === 0) return;
     setLocation(q);
     setEditingLoc(false);
-    // 입력한 주소를 좌표로 변환 (forward geocoding)
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ko&limit=1`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ko&limit=1&addressdetails=1`,
       );
       const data = await res.json();
       if (data[0]) {
-        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setCoords({ lat, lng });
+        const a = data[0].address ?? {};
+        setCityName(a.city || a.county || a.town || a.province || q);
       }
     } catch {
       /* 무시 */
     }
   };
+
 
 
   const toggleSymptom = (id: SymptomId) => {

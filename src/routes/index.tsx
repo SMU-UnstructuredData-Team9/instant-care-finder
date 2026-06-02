@@ -144,7 +144,7 @@ const HOSPITALS: Hospital[] = [
     er: { value: 8, total: 36 },
     icu: { value: 2, total: 12 },
     or: { value: 3, total: 8 },
-    capabilities: ["화상", "중독", "응급수술"],
+    capabilities: ["일반응급", "화상", "중독", "응급수술"],
   },
 ];
 

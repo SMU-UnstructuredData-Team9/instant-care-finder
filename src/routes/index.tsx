@@ -10,6 +10,7 @@ import {
   LocateFixed,
   Pencil,
   Check,
+  X,
 } from "lucide-react";
 import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";

@@ -279,6 +279,7 @@ function Index() {
   const [editingLoc, setEditingLoc] = useState(false);
   const [manualLoc, setManualLoc] = useState("");
   const [radiusKm, setRadiusKm] = useState(5);
+  const [detail, setDetail] = useState<Hospital | null>(null);
 
 
   // 좌표 → 도로명 주소 + 도시명

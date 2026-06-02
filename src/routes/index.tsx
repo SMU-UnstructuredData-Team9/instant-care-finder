@@ -699,13 +699,13 @@ function Index() {
           ))}
 
           <button
-            onClick={() => setRadiusKm((r) => Math.min(r + 10, 30))}
+            onClick={() => setRadiusKm((r) => r + 5)}
             disabled={!canExpand}
             className="flex w-full items-center justify-center gap-1 py-3 font-mono text-xs font-bold text-muted-foreground disabled:opacity-40"
           >
             {canExpand
-              ? `반경 ${radiusKm}km → ${Math.min(radiusKm + 10, 30)}km 확장`
-              : `최대 반경 ${radiusKm}km — 더 이상 결과 없음`}
+              ? `반경 ${radiusKm}km → ${radiusKm + 5}km 확장 (제한 없음)`
+              : `반경 ${radiusKm}km — 더 늘려도 결과 없음`}
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
 

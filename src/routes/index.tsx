@@ -235,7 +235,7 @@ function Index() {
   const [radiusKm, setRadiusKm] = useState(5);
 
 
-  // 좌표 → 도로명 주소 (OpenStreetMap Nominatim, 무료/무인증)
+  // 좌표 → 도로명 주소 + 도시명
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
@@ -243,17 +243,22 @@ function Index() {
       );
       const data = await res.json();
       const a = data.address ?? {};
+      const city = a.city || a.county || a.town || a.province || "지역";
       const parts = [
         a.city || a.county || a.province,
         a.borough || a.city_district || a.suburb,
         a.road,
         a.house_number,
       ].filter(Boolean);
-      return parts.length ? parts.join(" ") : (data.display_name as string);
+      return {
+        address: parts.length ? parts.join(" ") : (data.display_name as string),
+        city,
+      };
     } catch {
       return null;
     }
   };
+
 
   const acquireLocation = async () => {
     setLocating(true);

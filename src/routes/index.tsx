@@ -222,8 +222,9 @@ function Index() {
 
   const filteredHospitals = useMemo(() => {
     if (activeSymptoms.size === 0) return HOSPITALS;
+    // 가능성이 여러 개일 수 있으므로 OR 매칭: 후보 중 하나라도 수용 가능하면 표시
     return HOSPITALS.filter((h) =>
-      [...activeSymptoms].every((s) => h.capabilities.includes(s)),
+      [...activeSymptoms].some((s) => h.capabilities.includes(s)),
     );
   }, [activeSymptoms]);
 

@@ -355,6 +355,12 @@ function generateHospitals(
       or: t.or,
       capabilities: t.capabilities,
       message: t.message,
+      phone: t.phone,
+      erPhone: t.erPhone,
+      hours: t.hours,
+      erHours: t.erHours,
+      description: t.description,
+      departments: t.departments,
     };
   });
 }

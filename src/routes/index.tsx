@@ -227,10 +227,13 @@ function Index() {
   const [selected, setSelected] = useState<Set<SymptomId>>(new Set());
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("위치 확인 중…");
+  const [cityName, setCityName] = useState("지역");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(true);
   const [editingLoc, setEditingLoc] = useState(false);
   const [manualLoc, setManualLoc] = useState("");
+  const [radiusKm, setRadiusKm] = useState(5);
+
 
   // 좌표 → 도로명 주소 (OpenStreetMap Nominatim, 무료/무인증)
   const reverseGeocode = async (lat: number, lng: number) => {

@@ -632,8 +632,9 @@ function Index() {
           {rest.map((h, i) => (
             <article
               key={h.name}
+              onClick={() => setDetail(h)}
               className={
-                "animate-entrance rounded-2xl p-4 ring-1 ring-black/5 " +
+                "animate-entrance cursor-pointer rounded-2xl p-4 ring-1 ring-black/5 transition hover:ring-brand/40 " +
                 (h.status === "saturated" ? "bg-muted/40" : "bg-card")
               }
               style={{ animationDelay: `${200 + i * 100}ms` }}

@@ -168,54 +168,82 @@ function Index() {
   const [selected, setSelected] = useState<Set<SymptomId>>(new Set());
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("위치 확인 중…");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(true);
   const [editingLoc, setEditingLoc] = useState(false);
   const [manualLoc, setManualLoc] = useState("");
 
-  // 앱 시작 시 위치 자동 탐색
-  useEffect(() => {
+  // 좌표 → 도로명 주소 (OpenStreetMap Nominatim, 무료/무인증)
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ko&zoom=18`,
+      );
+      const data = await res.json();
+      const a = data.address ?? {};
+      const parts = [
+        a.city || a.county || a.province,
+        a.borough || a.city_district || a.suburb,
+        a.road,
+        a.house_number,
+      ].filter(Boolean);
+      return parts.length ? parts.join(" ") : (data.display_name as string);
+    } catch {
+      return null;
+    }
+  };
+
+  const acquireLocation = async () => {
+    setLocating(true);
+    setLocation("위치 확인 중…");
     if (!("geolocation" in navigator)) {
       setLocation("위치 권한 없음 — 직접 입력 필요");
       setLocating(false);
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocation(
-          `현재 위치 (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
-        );
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ lat, lng });
+        const addr = await reverseGeocode(lat, lng);
+        setLocation(addr ?? `현재 위치 (${lat.toFixed(3)}, ${lng.toFixed(3)})`);
         setLocating(false);
       },
       () => {
+        // 권한 거부 시 강남 기본값으로 폴백
+        setCoords({ lat: 37.5006, lng: 127.0364 });
         setLocation("서울 강남구 테헤란로 427");
         setLocating(false);
       },
-      { timeout: 5000 },
+      { timeout: 8000 },
     );
+  };
+
+  useEffect(() => {
+    acquireLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const refreshLocation = () => {
-    setLocating(true);
-    setLocation("위치 확인 중…");
-    navigator.geolocation?.getCurrentPosition(
-      (pos) => {
-        setLocation(
-          `현재 위치 (${pos.coords.latitude.toFixed(3)}, ${pos.coords.longitude.toFixed(3)})`,
-        );
-        setLocating(false);
-      },
-      () => {
-        setLocation("위치를 가져올 수 없음");
-        setLocating(false);
-      },
-    );
+  const submitManualLoc = async () => {
+    const q = manualLoc.trim();
+    if (q.length === 0) return;
+    setLocation(q);
+    setEditingLoc(false);
+    // 입력한 주소를 좌표로 변환 (forward geocoding)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&accept-language=ko&limit=1`,
+      );
+      const data = await res.json();
+      if (data[0]) {
+        setCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+      }
+    } catch {
+      /* 무시 */
+    }
   };
 
-  const submitManualLoc = () => {
-    if (manualLoc.trim().length === 0) return;
-    setLocation(manualLoc.trim());
-    setEditingLoc(false);
-  };
 
   const toggleSymptom = (id: SymptomId) => {
     setSelected((prev) => {

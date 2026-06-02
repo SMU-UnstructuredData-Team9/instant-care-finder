@@ -103,6 +103,12 @@ interface Hospital {
   or: { value: number; total: number };
   capabilities: SymptomId[];
   message?: string;
+  phone: string;
+  erPhone: string;
+  hours: string;
+  erHours: string;
+  description: string;
+  departments: string[];
 }
 
 // 병원 템플릿 — 사용자 위치 주변에 상대적으로 배치됨.
@@ -118,6 +124,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 4, total: 12 },
     or: { value: 2, total: 8 },
     capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"] as SymptomId[],
+    phone: "1588-1234",
+    erPhone: "031-200-7119",
+    hours: "외래 평일 08:30 ~ 17:30 / 토 08:30 ~ 12:30",
+    erHours: "응급실 24시간 연중무휴",
+    description:
+      "권역 심뇌혈관센터 지정 종합병원. 24시간 심장 카테터실 운영으로 심근경색·뇌졸중 골든타임 대응이 가능합니다.",
+    departments: ["응급의학과", "심장내과", "신경외과", "신경과", "흉부외과", "외과", "영상의학과"],
   },
   {
     suffix: "의료원",
@@ -129,6 +142,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 1, total: 10 },
     or: { value: 1, total: 6 },
     capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"] as SymptomId[],
+    phone: "1577-5678",
+    erPhone: "031-300-7119",
+    hours: "외래 평일 09:00 ~ 17:00",
+    erHours: "응급실 24시간 운영",
+    description:
+      "공공의료원. 소아 응급 야간 진료가 가능하며 일반응급·내과계 환자 수용에 강점이 있습니다.",
+    departments: ["응급의학과", "내과", "소아청소년과", "신경과", "가정의학과"],
   },
   {
     suffix: "삼성병원",
@@ -141,6 +161,13 @@ const HOSPITAL_TEMPLATES = [
     or: { value: 0, total: 8 },
     capabilities: ["뇌출혈", "중증외상", "응급수술"] as SymptomId[],
     message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
+    phone: "1599-3114",
+    erPhone: "02-3410-2119",
+    hours: "외래 평일 08:00 ~ 17:00",
+    erHours: "응급실 24시간 (현재 포화)",
+    description:
+      "권역응급의료센터. 평소 중증외상·뇌출혈 수술에 강하나 현재 침상이 모두 사용 중입니다.",
+    departments: ["응급의학과", "신경외과", "외상외과", "흉부외과", "혈관외과", "마취통증의학과"],
   },
   {
     suffix: "대학교병원",
@@ -152,6 +179,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 2, total: 12 },
     or: { value: 3, total: 8 },
     capabilities: ["일반응급", "화상", "중독", "응급수술"] as SymptomId[],
+    phone: "1577-0075",
+    erPhone: "02-2072-2119",
+    hours: "외래 평일 08:30 ~ 17:30",
+    erHours: "응급실 24시간 운영",
+    description:
+      "상급종합병원. 화상센터·중독관리센터 운영. 약물 중독 및 화상 환자 24시간 대응 가능합니다.",
+    departments: ["응급의학과", "성형외과", "외과", "내과", "독성학클리닉", "정신건강의학과"],
   },
   {
     suffix: "중앙의료원",
@@ -163,6 +197,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 1, total: 8 },
     or: { value: 1, total: 6 },
     capabilities: ["일반응급", "소아응급", "뇌졸중"] as SymptomId[],
+    phone: "1588-9999",
+    erPhone: "02-2260-7119",
+    hours: "외래 평일 09:00 ~ 17:30 / 토 09:00 ~ 12:30",
+    erHours: "응급실 24시간 / 소아응급 야간 운영",
+    description:
+      "공공보건의료 중추기관. 소아 전담 응급의료 전문의 상주, 야간 소아 진료가 가능합니다.",
+    departments: ["응급의학과", "소아청소년과", "내과", "신경과", "가정의학과"],
   },
   {
     suffix: "성모병원",
@@ -174,6 +215,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 1, total: 9 },
     or: { value: 0, total: 5 },
     capabilities: ["일반응급", "심근경색", "응급수술"] as SymptomId[],
+    phone: "1588-1511",
+    erPhone: "02-2258-1119",
+    hours: "외래 평일 08:30 ~ 17:00",
+    erHours: "응급실 24시간",
+    description:
+      "지역응급의료센터. 심혈관 인터벤션 가능. 현재 응급실 잔여 병상이 부족합니다.",
+    departments: ["응급의학과", "순환기내과", "외과", "마취통증의학과"],
   },
   {
     suffix: "권역응급의료센터",
@@ -185,6 +233,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 3, total: 16 },
     or: { value: 2, total: 10 },
     capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술"] as SymptomId[],
+    phone: "1577-1233",
+    erPhone: "031-787-2119",
+    hours: "외래 평일 08:30 ~ 17:30",
+    erHours: "응급실 24시간 권역 단위 중증 환자 수용",
+    description:
+      "권역응급의료센터 지정. 중증외상·뇌혈관·심혈관 응급에 24시간 다학제 대응이 가능합니다.",
+    departments: ["응급의학과", "신경외과", "흉부외과", "외상외과", "정형외과", "혈관외과"],
   },
   {
     suffix: "권역외상센터",
@@ -196,6 +251,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 5, total: 20 },
     or: { value: 4, total: 12 },
     capabilities: ["중증외상", "응급수술", "화상", "심근경색"] as SymptomId[],
+    phone: "1588-7575",
+    erPhone: "031-219-7119",
+    hours: "외래 평일 08:30 ~ 17:00",
+    erHours: "외상센터 24시간 365일 가동",
+    description:
+      "권역외상센터. 닥터헬기 운용, 다발성 외상·중증 외상 수술 동시 진행이 가능합니다.",
+    departments: ["외상외과", "응급의학과", "정형외과", "신경외과", "흉부외과", "성형외과"],
   },
   {
     suffix: "국립대학교병원",
@@ -207,6 +269,21 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 6, total: 24 },
     or: { value: 5, total: 14 },
     capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술", "소아응급", "화상", "중독"] as SymptomId[],
+    phone: "1588-5700",
+    erPhone: "042-280-7119",
+    hours: "외래 평일 08:30 ~ 17:30",
+    erHours: "응급실·소아응급·외상센터 24시간",
+    description:
+      "상급종합병원·권역응급의료센터. 모든 중증 진료군 24시간 다학제 대응이 가능한 거점 병원입니다.",
+    departments: [
+      "응급의학과",
+      "신경외과",
+      "흉부외과",
+      "외상외과",
+      "소아청소년과",
+      "성형외과",
+      "독성학클리닉",
+    ],
   },
   {
     suffix: "특수질환센터 (서울)",
@@ -219,6 +296,20 @@ const HOSPITAL_TEMPLATES = [
     or: { value: 6, total: 16 },
     capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술", "소아응급", "화상", "중독"] as SymptomId[],
     message: "희귀·특수질환 전국 단위 전원 가능",
+    phone: "1599-1004",
+    erPhone: "02-2072-0119",
+    hours: "외래 평일 08:00 ~ 17:30",
+    erHours: "응급실·특수질환센터 24시간",
+    description:
+      "전국 단위 전원이 가능한 특수질환 거점센터. 희귀질환·이식·중증 소아 응급까지 대응합니다.",
+    departments: [
+      "응급의학과",
+      "이식외과",
+      "희귀질환센터",
+      "소아응급의학과",
+      "신경외과",
+      "심장혈관흉부외과",
+    ],
   },
 ];
 

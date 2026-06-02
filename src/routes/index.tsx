@@ -961,7 +961,8 @@ function LiveMap({
         iconAnchor: [size / 2, size / 2],
       });
       L.marker([h.lat, h.lng], { icon })
-        .bindPopup(`<b>${h.name}</b><br/>${h.address}`)
+        .bindPopup(`<b>${h.name}</b><br/>${h.address}<br/><i>탭하면 상세 정보</i>`)
+        .on("click", () => onHospitalClick?.(h))
         .addTo(layer);
       points.push([h.lat, h.lng]);
     });

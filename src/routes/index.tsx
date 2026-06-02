@@ -793,7 +793,10 @@ function Index() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetail(h);
+                      }}
                       aria-label="전화"
                       className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
                     >

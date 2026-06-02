@@ -851,6 +851,7 @@ function HospitalDetailModal({
   onClose: () => void;
   activeSymptoms: Set<SymptomId>;
 }) {
+  const [callTarget, setCallTarget] = useState<{ label: string; number: string } | null>(null);
   if (!hospital) return null;
   const h = hospital;
   const statusLabel =
@@ -900,20 +901,71 @@ function HospitalDetailModal({
           </div>
         )}
 
+        {/* 병원 소개 */}
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground/80">
+          <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-brand" />
+          <p>{h.description}</p>
+        </div>
+
+        {/* 운영시간 */}
         <div className="mb-4">
-          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            실시간 병상 현황
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Clock className="h-3 w-3" /> 운영시간
           </h3>
-          <div className="grid grid-cols-3 gap-2">
-            <BedStat label="응급실" tone={h.er.value > 0 ? "green" : "red"} value={h.er.value} total={h.er.total} state={h.er.value > 0 ? "가용" : "포화"} />
-            <BedStat label="중환자실" tone={h.icu.value > 0 ? "green" : "red"} value={h.icu.value} total={h.icu.total} state={h.icu.value > 0 ? "가용" : "포화"} />
-            <BedStat label="수술실" tone={h.or.value > 0 ? "green" : "red"} value={h.or.value} total={h.or.total} state={h.or.value > 0 ? "가능" : "포화"} />
+          <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-bold text-foreground">외래</span>
+              <span className="text-right text-muted-foreground">{h.hours}</span>
+            </div>
+            <div className="h-px bg-border" />
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-bold text-status-red">응급</span>
+              <span className="text-right text-status-red/90">{h.erHours}</span>
+            </div>
           </div>
         </div>
 
+        {/* 전화번호 */}
+        <div className="mb-4">
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Phone className="h-3 w-3" /> 전화번호
+          </h3>
+          <div className="space-y-2">
+            <PhoneRow
+              label="응급실 직통"
+              number={h.erPhone}
+              accent
+              onCall={() => setCallTarget({ label: `${h.name} 응급실`, number: h.erPhone })}
+            />
+            <PhoneRow
+              label="대표번호"
+              number={h.phone}
+              onCall={() => setCallTarget({ label: h.name, number: h.phone })}
+            />
+          </div>
+        </div>
+
+        {/* 진료과 */}
+        <div className="mb-4">
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Stethoscope className="h-3 w-3" /> 진료과
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {h.departments.map((d) => (
+              <span
+                key={d}
+                className="rounded-md bg-muted px-2 py-1 text-[11px] font-bold text-foreground ring-1 ring-border"
+              >
+                {d}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* 수용 가능 진료군 */}
         <div className="mb-5">
-          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            수용 가능 진료군
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Building2 className="h-3 w-3" /> 수용 가능 진료군
           </h3>
           <div className="flex flex-wrap gap-1.5">
             {h.capabilities.map((c) => (
@@ -933,7 +985,10 @@ function HospitalDetailModal({
         </div>
 
         <div className="flex gap-2">
-          <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground active:scale-95">
+          <button
+            onClick={() => setCallTarget({ label: `${h.name} 응급실`, number: h.erPhone })}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground active:scale-95"
+          >
             <Phone className="h-4 w-4" />
             전화 연결
           </button>
@@ -941,6 +996,97 @@ function HospitalDetailModal({
             <Navigation className="h-4 w-4" />
             길찾기
           </button>
+        </div>
+      </div>
+
+      <CallConfirmDialog target={callTarget} onClose={() => setCallTarget(null)} />
+    </div>
+  );
+}
+
+function PhoneRow({
+  label,
+  number,
+  onCall,
+  accent,
+}: {
+  label: string;
+  number: string;
+  onCall: () => void;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={
+        "flex items-center justify-between gap-3 rounded-xl p-3 ring-1 " +
+        (accent ? "bg-status-red/5 ring-status-red/20" : "bg-muted/40 ring-border")
+      }
+    >
+      <div className="min-w-0">
+        <p className={"font-mono text-[10px] font-bold uppercase " + (accent ? "text-status-red" : "text-muted-foreground")}>
+          {label}
+        </p>
+        <p className="font-mono text-base font-black tracking-tight">{number}</p>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onCall();
+        }}
+        className={
+          "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold active:scale-95 " +
+          (accent ? "bg-status-red text-white" : "bg-foreground text-background")
+        }
+      >
+        <Phone className="h-3.5 w-3.5" />
+        전화
+      </button>
+    </div>
+  );
+}
+
+function CallConfirmDialog({
+  target,
+  onClose,
+}: {
+  target: { label: string; number: string } | null;
+  onClose: () => void;
+}) {
+  if (!target) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="animate-entrance w-full max-w-xs rounded-2xl bg-card p-5 shadow-2xl"
+      >
+        <div className="mb-3 text-center">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-status-red/10">
+            <Phone className="h-5 w-5 text-status-red" />
+          </div>
+          <p className="text-xs font-bold text-muted-foreground">{target.label}</p>
+          <p className="mt-1 font-mono text-2xl font-black tracking-tight">{target.number}</p>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            전화를 거시려면 아래 버튼을 한 번 더 눌러주세요.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl bg-muted py-3 text-sm font-bold active:scale-95"
+          >
+            취소
+          </button>
+          <a
+            href={`tel:${target.number.replace(/[^0-9+]/g, "")}`}
+            onClick={onClose}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-status-red py-3 text-sm font-bold text-white active:scale-95"
+          >
+            <Phone className="h-4 w-4" />
+            전화걸기
+          </a>
         </div>
       </div>
     </div>

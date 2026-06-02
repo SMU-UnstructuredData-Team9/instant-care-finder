@@ -11,6 +11,10 @@ import {
   Pencil,
   Check,
   X,
+  Clock,
+  Building2,
+  Stethoscope,
+  Info,
 } from "lucide-react";
 import type * as Leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -103,6 +107,12 @@ interface Hospital {
   or: { value: number; total: number };
   capabilities: SymptomId[];
   message?: string;
+  phone: string;
+  erPhone: string;
+  hours: string;
+  erHours: string;
+  description: string;
+  departments: string[];
 }
 
 // 병원 템플릿 — 사용자 위치 주변에 상대적으로 배치됨.
@@ -118,6 +128,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 4, total: 12 },
     or: { value: 2, total: 8 },
     capabilities: ["일반응급", "심근경색", "응급수술", "뇌출혈", "중증외상"] as SymptomId[],
+    phone: "1588-1234",
+    erPhone: "031-200-7119",
+    hours: "외래 평일 08:30 ~ 17:30 / 토 08:30 ~ 12:30",
+    erHours: "응급실 24시간 연중무휴",
+    description:
+      "권역 심뇌혈관센터 지정 종합병원. 24시간 심장 카테터실 운영으로 심근경색·뇌졸중 골든타임 대응이 가능합니다.",
+    departments: ["응급의학과", "심장내과", "신경외과", "신경과", "흉부외과", "외과", "영상의학과"],
   },
   {
     suffix: "의료원",
@@ -129,6 +146,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 1, total: 10 },
     or: { value: 1, total: 6 },
     capabilities: ["일반응급", "뇌졸중", "심근경색", "소아응급"] as SymptomId[],
+    phone: "1577-5678",
+    erPhone: "031-300-7119",
+    hours: "외래 평일 09:00 ~ 17:00",
+    erHours: "응급실 24시간 운영",
+    description:
+      "공공의료원. 소아 응급 야간 진료가 가능하며 일반응급·내과계 환자 수용에 강점이 있습니다.",
+    departments: ["응급의학과", "내과", "소아청소년과", "신경과", "가정의학과"],
   },
   {
     suffix: "삼성병원",
@@ -141,6 +165,13 @@ const HOSPITAL_TEMPLATES = [
     or: { value: 0, total: 8 },
     capabilities: ["뇌출혈", "중증외상", "응급수술"] as SymptomId[],
     message: "응급실 침상 포화로 인한 수용 지연 (대기 120분 이상)",
+    phone: "1599-3114",
+    erPhone: "02-3410-2119",
+    hours: "외래 평일 08:00 ~ 17:00",
+    erHours: "응급실 24시간 (현재 포화)",
+    description:
+      "권역응급의료센터. 평소 중증외상·뇌출혈 수술에 강하나 현재 침상이 모두 사용 중입니다.",
+    departments: ["응급의학과", "신경외과", "외상외과", "흉부외과", "혈관외과", "마취통증의학과"],
   },
   {
     suffix: "대학교병원",
@@ -152,6 +183,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 2, total: 12 },
     or: { value: 3, total: 8 },
     capabilities: ["일반응급", "화상", "중독", "응급수술"] as SymptomId[],
+    phone: "1577-0075",
+    erPhone: "02-2072-2119",
+    hours: "외래 평일 08:30 ~ 17:30",
+    erHours: "응급실 24시간 운영",
+    description:
+      "상급종합병원. 화상센터·중독관리센터 운영. 약물 중독 및 화상 환자 24시간 대응 가능합니다.",
+    departments: ["응급의학과", "성형외과", "외과", "내과", "독성학클리닉", "정신건강의학과"],
   },
   {
     suffix: "중앙의료원",
@@ -163,6 +201,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 1, total: 8 },
     or: { value: 1, total: 6 },
     capabilities: ["일반응급", "소아응급", "뇌졸중"] as SymptomId[],
+    phone: "1588-9999",
+    erPhone: "02-2260-7119",
+    hours: "외래 평일 09:00 ~ 17:30 / 토 09:00 ~ 12:30",
+    erHours: "응급실 24시간 / 소아응급 야간 운영",
+    description:
+      "공공보건의료 중추기관. 소아 전담 응급의료 전문의 상주, 야간 소아 진료가 가능합니다.",
+    departments: ["응급의학과", "소아청소년과", "내과", "신경과", "가정의학과"],
   },
   {
     suffix: "성모병원",
@@ -174,6 +219,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 1, total: 9 },
     or: { value: 0, total: 5 },
     capabilities: ["일반응급", "심근경색", "응급수술"] as SymptomId[],
+    phone: "1588-1511",
+    erPhone: "02-2258-1119",
+    hours: "외래 평일 08:30 ~ 17:00",
+    erHours: "응급실 24시간",
+    description:
+      "지역응급의료센터. 심혈관 인터벤션 가능. 현재 응급실 잔여 병상이 부족합니다.",
+    departments: ["응급의학과", "순환기내과", "외과", "마취통증의학과"],
   },
   {
     suffix: "권역응급의료센터",
@@ -185,6 +237,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 3, total: 16 },
     or: { value: 2, total: 10 },
     capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술"] as SymptomId[],
+    phone: "1577-1233",
+    erPhone: "031-787-2119",
+    hours: "외래 평일 08:30 ~ 17:30",
+    erHours: "응급실 24시간 권역 단위 중증 환자 수용",
+    description:
+      "권역응급의료센터 지정. 중증외상·뇌혈관·심혈관 응급에 24시간 다학제 대응이 가능합니다.",
+    departments: ["응급의학과", "신경외과", "흉부외과", "외상외과", "정형외과", "혈관외과"],
   },
   {
     suffix: "권역외상센터",
@@ -196,6 +255,13 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 5, total: 20 },
     or: { value: 4, total: 12 },
     capabilities: ["중증외상", "응급수술", "화상", "심근경색"] as SymptomId[],
+    phone: "1588-7575",
+    erPhone: "031-219-7119",
+    hours: "외래 평일 08:30 ~ 17:00",
+    erHours: "외상센터 24시간 365일 가동",
+    description:
+      "권역외상센터. 닥터헬기 운용, 다발성 외상·중증 외상 수술 동시 진행이 가능합니다.",
+    departments: ["외상외과", "응급의학과", "정형외과", "신경외과", "흉부외과", "성형외과"],
   },
   {
     suffix: "국립대학교병원",
@@ -207,6 +273,21 @@ const HOSPITAL_TEMPLATES = [
     icu: { value: 6, total: 24 },
     or: { value: 5, total: 14 },
     capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술", "소아응급", "화상", "중독"] as SymptomId[],
+    phone: "1588-5700",
+    erPhone: "042-280-7119",
+    hours: "외래 평일 08:30 ~ 17:30",
+    erHours: "응급실·소아응급·외상센터 24시간",
+    description:
+      "상급종합병원·권역응급의료센터. 모든 중증 진료군 24시간 다학제 대응이 가능한 거점 병원입니다.",
+    departments: [
+      "응급의학과",
+      "신경외과",
+      "흉부외과",
+      "외상외과",
+      "소아청소년과",
+      "성형외과",
+      "독성학클리닉",
+    ],
   },
   {
     suffix: "특수질환센터 (서울)",
@@ -219,6 +300,20 @@ const HOSPITAL_TEMPLATES = [
     or: { value: 6, total: 16 },
     capabilities: ["중증외상", "뇌출혈", "뇌졸중", "심근경색", "응급수술", "소아응급", "화상", "중독"] as SymptomId[],
     message: "희귀·특수질환 전국 단위 전원 가능",
+    phone: "1599-1004",
+    erPhone: "02-2072-0119",
+    hours: "외래 평일 08:00 ~ 17:30",
+    erHours: "응급실·특수질환센터 24시간",
+    description:
+      "전국 단위 전원이 가능한 특수질환 거점센터. 희귀질환·이식·중증 소아 응급까지 대응합니다.",
+    departments: [
+      "응급의학과",
+      "이식외과",
+      "희귀질환센터",
+      "소아응급의학과",
+      "신경외과",
+      "심장혈관흉부외과",
+    ],
   },
 ];
 
@@ -264,6 +359,12 @@ function generateHospitals(
       or: t.or,
       capabilities: t.capabilities,
       message: t.message,
+      phone: t.phone,
+      erPhone: t.erPhone,
+      hours: t.hours,
+      erHours: t.erHours,
+      description: t.description,
+      departments: t.departments,
     };
   });
 }
@@ -611,7 +712,10 @@ function Index() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetail(top);
+                  }}
                   className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95"
                 >
                   <Phone className="h-4 w-4" />
@@ -689,7 +793,10 @@ function Index() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetail(h);
+                      }}
                       aria-label="전화"
                       className="flex size-10 items-center justify-center rounded-lg ring-1 ring-border active:scale-95"
                     >
@@ -750,6 +857,7 @@ function HospitalDetailModal({
   onClose: () => void;
   activeSymptoms: Set<SymptomId>;
 }) {
+  const [callTarget, setCallTarget] = useState<{ label: string; number: string } | null>(null);
   if (!hospital) return null;
   const h = hospital;
   const statusLabel =
@@ -799,20 +907,71 @@ function HospitalDetailModal({
           </div>
         )}
 
+        {/* 병원 소개 */}
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground/80">
+          <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-brand" />
+          <p>{h.description}</p>
+        </div>
+
+        {/* 운영시간 */}
         <div className="mb-4">
-          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            실시간 병상 현황
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Clock className="h-3 w-3" /> 운영시간
           </h3>
-          <div className="grid grid-cols-3 gap-2">
-            <BedStat label="응급실" tone={h.er.value > 0 ? "green" : "red"} value={h.er.value} total={h.er.total} state={h.er.value > 0 ? "가용" : "포화"} />
-            <BedStat label="중환자실" tone={h.icu.value > 0 ? "green" : "red"} value={h.icu.value} total={h.icu.total} state={h.icu.value > 0 ? "가용" : "포화"} />
-            <BedStat label="수술실" tone={h.or.value > 0 ? "green" : "red"} value={h.or.value} total={h.or.total} state={h.or.value > 0 ? "가능" : "포화"} />
+          <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-bold text-foreground">외래</span>
+              <span className="text-right text-muted-foreground">{h.hours}</span>
+            </div>
+            <div className="h-px bg-border" />
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-bold text-status-red">응급</span>
+              <span className="text-right text-status-red/90">{h.erHours}</span>
+            </div>
           </div>
         </div>
 
+        {/* 전화번호 */}
+        <div className="mb-4">
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Phone className="h-3 w-3" /> 전화번호
+          </h3>
+          <div className="space-y-2">
+            <PhoneRow
+              label="응급실 직통"
+              number={h.erPhone}
+              accent
+              onCall={() => setCallTarget({ label: `${h.name} 응급실`, number: h.erPhone })}
+            />
+            <PhoneRow
+              label="대표번호"
+              number={h.phone}
+              onCall={() => setCallTarget({ label: h.name, number: h.phone })}
+            />
+          </div>
+        </div>
+
+        {/* 진료과 */}
+        <div className="mb-4">
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Stethoscope className="h-3 w-3" /> 진료과
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {h.departments.map((d) => (
+              <span
+                key={d}
+                className="rounded-md bg-muted px-2 py-1 text-[11px] font-bold text-foreground ring-1 ring-border"
+              >
+                {d}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* 수용 가능 진료군 */}
         <div className="mb-5">
-          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            수용 가능 진료군
+          <h3 className="mb-2 flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Building2 className="h-3 w-3" /> 수용 가능 진료군
           </h3>
           <div className="flex flex-wrap gap-1.5">
             {h.capabilities.map((c) => (
@@ -832,7 +991,10 @@ function HospitalDetailModal({
         </div>
 
         <div className="flex gap-2">
-          <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground active:scale-95">
+          <button
+            onClick={() => setCallTarget({ label: `${h.name} 응급실`, number: h.erPhone })}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground active:scale-95"
+          >
             <Phone className="h-4 w-4" />
             전화 연결
           </button>
@@ -840,6 +1002,97 @@ function HospitalDetailModal({
             <Navigation className="h-4 w-4" />
             길찾기
           </button>
+        </div>
+      </div>
+
+      <CallConfirmDialog target={callTarget} onClose={() => setCallTarget(null)} />
+    </div>
+  );
+}
+
+function PhoneRow({
+  label,
+  number,
+  onCall,
+  accent,
+}: {
+  label: string;
+  number: string;
+  onCall: () => void;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={
+        "flex items-center justify-between gap-3 rounded-xl p-3 ring-1 " +
+        (accent ? "bg-status-red/5 ring-status-red/20" : "bg-muted/40 ring-border")
+      }
+    >
+      <div className="min-w-0">
+        <p className={"font-mono text-[10px] font-bold uppercase " + (accent ? "text-status-red" : "text-muted-foreground")}>
+          {label}
+        </p>
+        <p className="font-mono text-base font-black tracking-tight">{number}</p>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onCall();
+        }}
+        className={
+          "flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold active:scale-95 " +
+          (accent ? "bg-status-red text-white" : "bg-foreground text-background")
+        }
+      >
+        <Phone className="h-3.5 w-3.5" />
+        전화
+      </button>
+    </div>
+  );
+}
+
+function CallConfirmDialog({
+  target,
+  onClose,
+}: {
+  target: { label: string; number: string } | null;
+  onClose: () => void;
+}) {
+  if (!target) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="animate-entrance w-full max-w-xs rounded-2xl bg-card p-5 shadow-2xl"
+      >
+        <div className="mb-3 text-center">
+          <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-status-red/10">
+            <Phone className="h-5 w-5 text-status-red" />
+          </div>
+          <p className="text-xs font-bold text-muted-foreground">{target.label}</p>
+          <p className="mt-1 font-mono text-2xl font-black tracking-tight">{target.number}</p>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            전화를 거시려면 아래 버튼을 한 번 더 눌러주세요.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl bg-muted py-3 text-sm font-bold active:scale-95"
+          >
+            취소
+          </button>
+          <a
+            href={`tel:${target.number.replace(/[^0-9+]/g, "")}`}
+            onClick={onClose}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-status-red py-3 text-sm font-bold text-white active:scale-95"
+          >
+            <Phone className="h-4 w-4" />
+            전화걸기
+          </a>
         </div>
       </div>
     </div>

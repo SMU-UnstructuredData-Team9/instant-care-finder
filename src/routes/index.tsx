@@ -319,7 +319,7 @@ function Index() {
           </div>
           <div className="flex gap-1.5">
             <button
-              onClick={refreshLocation}
+              onClick={acquireLocation}
               aria-label="내 위치 다시 찾기"
               className="rounded-lg bg-white/10 p-2 ring-1 ring-white/10 active:scale-95"
             >

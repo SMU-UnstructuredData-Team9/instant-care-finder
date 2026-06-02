@@ -556,7 +556,8 @@ function Index() {
           {/* Top card */}
           {top && (
             <article
-              className="animate-entrance relative rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand"
+              onClick={() => setDetail(top)}
+              className="animate-entrance relative cursor-pointer rounded-2xl bg-card p-4 shadow-xl ring-2 ring-brand transition hover:shadow-2xl"
               style={{ animationDelay: "100ms" }}
             >
               <div className="absolute -top-3 left-4 rounded-full bg-brand px-3 py-1 font-mono text-[10px] font-black italic tracking-tighter text-brand-foreground">

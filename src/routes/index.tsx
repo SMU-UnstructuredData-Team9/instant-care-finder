@@ -610,11 +610,17 @@ function Index() {
               </div>
 
               <div className="flex gap-2">
-                <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95">
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand py-4 font-bold text-brand-foreground transition-transform active:scale-95"
+                >
                   <Phone className="h-4 w-4" />
                   전화 연결
                 </button>
-                <button className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95">
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-card py-4 font-bold ring-1 ring-border transition-transform active:scale-95"
+                >
                   <Navigation className="h-4 w-4" />
                   길찾기
                 </button>

@@ -380,22 +380,17 @@ function Index() {
       </header>
 
       <main className="flex-1 space-y-5 px-4 py-6">
-        {/* Mini map */}
+        {/* 실시간 지도 */}
         <section className="animate-entrance overflow-hidden rounded-2xl ring-1 ring-black/5">
-          <div className="relative h-32 w-full">
-            <img
-              src={dispatchMap}
-              alt="응급의료 디스패치 지도"
-              width={1024}
-              height={512}
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
+          <div className="relative h-56 w-full">
+            <LiveMap coords={coords} hospitals={filteredHospitals} />
+            <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1.5 rounded bg-white/95 px-2 py-1 text-[10px] font-bold shadow-sm ring-1 ring-black/5">
               <span className="size-1.5 animate-pulse-slow rounded-full bg-status-green" />
               실시간 갱신 중
             </div>
           </div>
         </section>
+
 
         {/* Recommendations */}
         <section className="space-y-4">
